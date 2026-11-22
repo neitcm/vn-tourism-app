@@ -16,8 +16,7 @@ import m10
 import ui
 from ui import INK, MUTED, GRID, P
 
-st.set_page_config(page_title="Coming Back · Du lịch Việt Nam", page_icon="🏝️", layout="wide",
-                   initial_sidebar_state="expanded")
+st.set_page_config(page_title="Coming Back · Du lịch Việt Nam hihi", page_icon="🏝️", layout="wide", initial_sidebar_state="expanded")
 ui.inject_css()
 
 PLOTLY_MARKER = {"o": "circle", "s": "square", "^": "triangle-up", "D": "diamond", "v": "triangle-down", "P": "cross"}
