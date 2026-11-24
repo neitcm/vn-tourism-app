@@ -74,7 +74,7 @@ def load_master() -> pd.DataFrame:
 
 
 def load_weather() -> pd.DataFrame:
-    w = pd.read_csv(DATA / "PUB03_OpenMeteo_Monthly_Clean.csv", encoding="utf-8-sig", parse_dates=["date"])
+    w = pd.read_csv(DATA / "PUB03_OpenMeteo_ERA5_Monthly_Clean.csv", encoding="utf-8-sig", parse_dates=["date"])
     w["year"] = w["date"].dt.year
     w["month"] = w["date"].dt.month
     w["destination"] = w["destination"].replace({"Da Nang": "Đà Nẵng", "Nha Trang": "Nha Trang"})
@@ -82,7 +82,7 @@ def load_weather() -> pd.DataFrame:
 
 
 def load_trends() -> pd.DataFrame:
-    t = pd.read_csv(DATA / "PUB01_PUB02_All_Markets_Integrated.csv", encoding="utf-8-sig", parse_dates=["date"])
+    t = pd.read_csv(DATA / "PUB01_PUB02_Integrated_Clean.csv", encoding="utf-8-sig", parse_dates=["date"])
     t["market"] = t["source_market"].map(VN_NAME).fillna(t["source_market"])
     return t
 
