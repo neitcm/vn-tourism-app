@@ -64,7 +64,7 @@ def page_story(D):
 
     ui.hero(
         "Khách quốc tế đã trở lại Việt Nam — nhưng không phải ai cũng trở lại như nhau",
-        f"Theo dõi {m['market'].nunique()} thị trường nguồn từ 2019 đến {ui.mlabel(end)}: ai đã vượt mức trước đại dịch, "
+        f"Theo dõi {m['market'].nunique()} thị trường nguồn từ 2017 đến {ui.mlabel(end)}: ai đã vượt mức trước đại dịch, "
         "ai còn chậm chân, và Ban Du lịch nên làm gì tiếp theo.",
         ["Du lịch quốc tế", f"Dữ liệu đến {ui.mlabel(end)}", "So với 2019 = 100"],
     )
@@ -116,7 +116,7 @@ def page_story(D):
     # ---- Chương 2: gián đoạn
     ui.chapter(2, "Gián đoạn 2020–2021", "Chỉ số gộp rơi gần như về đáy ngay quý I/2020; sau đó nguồn không có số liệu theo thị trường.")
     ts = dl.total_index_series(m).set_index("date")["index"]
-    rng = pd.date_range("2019-10-01", "2022-06-01", freq="MS")
+    rng = pd.date_range("2017-01-01", "2022-06-01", freq="MS")
     s2 = ts.reindex(rng)
     fig = go.Figure(go.Scatter(x=s2.index, y=s2.values, mode="lines+markers", connectgaps=False,
                                line=dict(color=P["Poppy"], width=3), marker=dict(size=7),
@@ -482,7 +482,7 @@ def page_season(D):
         ui.show(fig, key="se_heat")
         ui.source("Master table M2. Màu cắt ở 40–160 để ngoại lệ không lấn át; số trong ô là giá trị thật.")
     with t2:
-        wd = w.loc[w["year"].between(2019, 2025)]
+        wd = w.loc[w["year"].between(2017, 2025)]
         rain = wd.groupby(["destination", "month"])["precipitation_sum"].median().unstack(0)
         sun = wd.groupby(["destination", "month"])["sunshine_hours"].median().unstack(0)
         dcol = {"Đà Nẵng": P["Pea Flower"], "Nha Trang": P["Florida Oranges"]}
@@ -495,7 +495,7 @@ def page_season(D):
         fig.update_yaxes(title="Lượng mưa trung vị (mm/tháng)")
         wet = {c: ", ".join(f"T{k}" for k in rain[c].sort_values(ascending=False).head(3).index.sort_values()) for c in rain.columns}
         ui.chart_title(f"Mưa nhiều nhất: Đà Nẵng vào {wet.get('Đà Nẵng', '–')}; Nha Trang vào {wet.get('Nha Trang', '–')}",
-                       "Trung vị lượng mưa từng tháng, 2019–2025")
+                       "Trung vị lượng mưa từng tháng, 2017–2025")
         ui.show(fig, key="se_rain")
         fig = go.Figure()
         for dest in sun.columns:
