@@ -261,7 +261,7 @@ def _load_m8_log() -> pd.DataFrame | None:
 
 def page_beyond_flat(D):
     m = D["master"]
-    _header("🌍", "Vượt khỏi màn hình phẳng", "Cùng một dữ liệu luồng khách, hai cách nhìn: quả địa cầu 3D và bản đồ phẳng 2D — và nhóm đã thử xem cách nào thật sự nhanh hơn.")
+    _header("🌍", "Góc nhìn 3D & 2D", "Cùng một dữ liệu luồng khách, hai cách nhìn: quả địa cầu 3D và bản đồ phẳng 2D — và nhóm đã thử xem cách nào thật sự nhanh hơn.")
     t1, t2, t3 = st.tabs(["🗺️ Địa cầu 3D & bản đồ 2D", "📊 Thanh xếp hạng (đối chứng)", "🧪 Kết quả thử nghiệm 2D vs 3D"])
 
     dates = [pd.Timestamp(x) for x in sorted(m["date"].unique())]

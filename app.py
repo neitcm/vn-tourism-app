@@ -560,8 +560,8 @@ PAGES = {
     "Đua phục hồi": page_race,
     "Mùa vụ & thời tiết": page_season,
     "Phân khúc thị trường": page_segments,
-    "Đa chiều": m78.page_many_dimensions,
-    "Vượt khỏi màn hình phẳng": m78.page_beyond_flat,
+    "Tương tác đa chiều": m78.page_many_dimensions,
+    "Góc nhìn 3D & 2D": m78.page_beyond_flat,
     "Kiểm thử & cải tiến": None,
 }
 
