@@ -461,7 +461,7 @@ def page_season(D):
     page_header("🌦️", "Mùa vụ & thời tiết", "Khi nào khách đến nhiều, và mưa nắng ở hai điểm đến biển ảnh hưởng thế nào đến việc chọn tháng.")
     t1, t2 = st.tabs(["🔥 Bản đồ nhiệt thị trường × tháng", "☔ Mưa nắng Đà Nẵng · Nha Trang"])
     with t1:
-        years = [y for y in sorted(m.loc[m["recovery_index"].notna(), "year"].unique(), reverse=True) if y >= 2022]
+        years = sorted(m.loc[m["recovery_index"].notna(), "year"].unique(), reverse=True)
         y = st.select_slider("Năm", options=sorted(years), value=2025 if 2025 in years else years[0])
         d = m.loc[(m["year"] == y) & m["recovery_index"].notna()]
         piv = d.pivot(index="market", columns="month", values="recovery_index").reindex(columns=range(1, 13))
