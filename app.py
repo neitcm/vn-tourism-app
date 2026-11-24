@@ -13,6 +13,7 @@ import streamlit as st
 import data_layer as dl
 import house_style as hs
 import m10
+import pages_m7_m8 as m78
 import ui
 from ui import INK, MUTED, GRID, P
 
@@ -559,6 +560,8 @@ PAGES = {
     "Đua phục hồi": page_race,
     "Mùa vụ & thời tiết": page_season,
     "Phân khúc thị trường": page_segments,
+    "Đa chiều (M7)": m78.page_many_dimensions,
+    "Vượt khỏi màn hình phẳng (M8)": m78.page_beyond_flat,
     "Kiểm thử & cải tiến": None,
 }
 

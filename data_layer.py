@@ -8,14 +8,6 @@ Toàn bộ định nghĩa chỉ số bám theo notebook M4/M6 của nhóm.
 """
 from __future__ import annotations
 
-import pandas as pd
-
-df = pd.read_csv("data/master_market_month.csv")
-
-print(df.head())
-print(df.shape)
-print(df.columns.tolist())
-
 from pathlib import Path
 
 import numpy as np
