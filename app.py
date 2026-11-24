@@ -27,7 +27,6 @@ CLUSTER_ACTION = {1: "Kiểm tra đường bay và thời gian đặt tour.", 2:
 
 
 # ============================================================ dữ liệu (cache)
-@st.cache_data(show_spinner="Đang nạp dữ liệu…")
 def get_data():
     m = dl.load_master()
     feats, excl = dl.build_features(m)

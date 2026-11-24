@@ -51,53 +51,197 @@ def page_many_dimensions(D):
         _m7_design()
 
 
+
 def _heatmap(D):
-    m = D["master"]
+    m = D["master"].copy()
     end = dl.latest_date(m)
-    c1, c2 = st.columns([1.3, 1])
-    order = c1.radio("Sắp xếp hàng", ["Tên thị trường (A–Z)", "Tổng lượt khách", "Chỉ số mới nhất"], horizontal=True, key="m7_order")
-    years = sorted(m["year"].unique())
-    y0 = c2.select_slider("Từ năm", options=years, value=years[0], key="m7_from")
 
-    d = m.loc[m["date"] >= pd.Timestamp(f"{y0}-01-01")]
-    piv = d.pivot(index="market", columns="date", values="recovery_index")
-    months = pd.date_range(piv.columns.min(), piv.columns.max(), freq="MS")
-    piv = piv.reindex(columns=months).dropna(how="all")  # thị trường không có chỉ số nào thì ẩn
-    if order.startswith("Tổng"):
-        tot = d.groupby("market")["arrivals"].sum().reindex(piv.index)
-        piv = piv.loc[tot.sort_values(ascending=True).index]
-    elif order.startswith("Chỉ số"):
-        last = piv.iloc[:, -1]
-        piv = piv.loc[last.sort_values(ascending=True, na_position="first").index]
+    c1, c2, c3 = st.columns([1.1, 1, 1.3])
+
+    order = c1.radio(
+        "Sắp xếp hàng",
+        ["Tên thị trường (A–Z)", "Tổng lượt khách", "Chỉ số mới nhất"],
+        horizontal=False,
+        key="m7_order"
+    )
+
+    years = sorted(m["year"].dropna().unique().astype(int).tolist())
+    y0 = c2.select_slider(
+        "Từ năm",
+        options=years,
+        value=years[0],
+        key="m7_from"
+    )
+
+    metric = c3.selectbox(
+        "Chỉ số hiển thị",
+        ["Lượt khách thực tế", "Chỉ số phục hồi (2019 = 100)"],
+        key="m7_heat_metric"
+    )
+
+    d = m.loc[m["date"] >= pd.Timestamp(f"{y0}-01-01")].copy()
+
+    if metric == "Lượt khách thực tế":
+        value_col = "arrivals"
+        color_title = "Lượt khách"
+        colorbar_title = "Lượt khách"
+        hover_label = "Lượt khách"
+        d = d.loc[d["arrivals"].notna()]
     else:
-        piv = piv.sort_index(ascending=False)  # A–Z từ trên xuống (trục y vẽ từ dưới lên)
+        value_col = "recovery_index"
+        color_title = "Chỉ số phục hồi"
+        colorbar_title = "Chỉ số"
+        hover_label = "Chỉ số phục hồi"
+        d = d.loc[d["recovery_index"].notna()]
 
-    last_col = piv.iloc[:, -1].dropna()
-    n_above = int((last_col > 100).sum())
-    fig = go.Figure(go.Heatmap(
-        z=piv.clip(0, 200).values, x=piv.columns, y=[dl.label(k) for k in piv.index],
-        colorscale=DIV_SCALE, zmin=0, zmax=200, customdata=piv.values, hoverongaps=False, xgap=0, ygap=1,
-        hovertemplate="<b>%{y}</b> · %{x|%m/%Y}<br>Chỉ số: %{customdata:.0f}<extra></extra>",
-        colorbar=dict(title="Chỉ số", tickvals=[0, 50, 100, 150, 200], ticktext=["0", "50", "100", "150", "≥200"], len=.85)))
-    ui.style_fig(fig, 120 + 22 * len(piv), legend=False, margin=dict(l=10, r=10, t=10, b=10))
+    if d.empty:
+        st.info("Không có dữ liệu cho lựa chọn này.")
+        return
+
+    piv = d.pivot_table(
+        index="market",
+        columns="date",
+        values=value_col,
+        aggfunc="mean"
+    )
+
+    months = pd.date_range(
+        start=piv.columns.min(),
+        end=piv.columns.max(),
+        freq="MS"
+    )
+    piv = piv.reindex(columns=months).dropna(how="all")
+
+    if piv.empty:
+        st.info("Không có dữ liệu để hiển thị.")
+        return
+
+    if order.startswith("Tổng"):
+        totals = d.groupby("market")["arrivals"].sum().reindex(piv.index)
+        piv = piv.loc[totals.sort_values(ascending=True).index]
+
+    elif order.startswith("Chỉ số"):
+        latest_values = piv.iloc[:, -1]
+        piv = piv.loc[
+            latest_values.sort_values(
+                ascending=True,
+                na_position="first"
+            ).index
+        ]
+
+    else:
+        piv = piv.sort_index(ascending=False)
+
+    if metric == "Lượt khách thực tế":
+        z = piv.values
+        fig = go.Figure(go.Heatmap(
+            z=z,
+            x=piv.columns,
+            y=[dl.label(k) for k in piv.index],
+            colorscale="YlGnBu",
+            customdata=piv.values,
+            hovertemplate=(
+                "<b>%{y}</b> · %{x|%m/%Y}"
+                "<br>Lượt khách: %{customdata:,.0f}"
+                "<extra></extra>"
+            ),
+            colorbar=dict(title=colorbar_title),
+            hoverongaps=False
+        ))
+
+        subtitle = (
+            "Mỗi ô thể hiện số lượt khách thực tế của từng thị trường "
+            "theo tháng. Có thể xem dữ liệu từ năm 2017."
+        )
+
+    else:
+        z = piv.clip(0, 200).values
+        fig = go.Figure(go.Heatmap(
+            z=z,
+            x=piv.columns,
+            y=[dl.label(k) for k in piv.index],
+            colorscale=DIV_SCALE,
+            zmin=0,
+            zmax=200,
+            customdata=piv.values,
+            hovertemplate=(
+                "<b>%{y}</b> · %{x|%m/%Y}"
+                "<br>Chỉ số phục hồi: %{customdata:.0f}"
+                "<extra></extra>"
+            ),
+            colorbar=dict(
+                title=colorbar_title,
+                tickvals=[0, 50, 100, 150, 200],
+                ticktext=["0", "50", "100", "150", "≥200"],
+                len=.85
+            ),
+            hoverongaps=False
+        ))
+
+        subtitle = (
+            "Mỗi ô là chỉ số phục hồi so với cùng tháng năm 2019 = 100. "
+            "Dữ liệu trước năm 2019 không có chỉ số phục hồi."
+        )
+
+    ui.style_fig(
+        fig,
+        120 + 22 * len(piv),
+        legend=False,
+        margin=dict(l=10, r=10, t=10, b=10)
+    )
+
     fig.update_yaxes(showgrid=False, tickfont=dict(size=11))
     fig.update_xaxes(tickformat="%Y", dtick="M12", showgrid=False)
-    ui.chart_title(f"{n_above}/{len(last_col)} thị trường có số liệu vượt mức 2019 vào {ui.mlabel(end)}",
-                   "Mỗi ô là chỉ số phục hồi của một thị trường trong một tháng (cùng tháng 2019 = 100). Cam = dưới 2019 · Xám = bằng 2019 · Xanh = vượt 2019 · Ô trắng = thiếu chỉ số")
+
+    ui.chart_title(
+        f"{len(piv)} thị trường · {y0}–{end.year}",
+        subtitle
+    )
+
     ui.show(fig, key="m7_heat")
-    ui.source("Master table M2. Màu cắt ở 200 (ô vượt 200 dùng chung màu cuối thang); số thật hiện khi di chuột.")
+
+    ui.source(
+        "Master table M2. "
+        + (
+            "Giá trị là lượt khách thực tế."
+            if metric == "Lượt khách thực tế"
+            else "Chỉ số phục hồi lấy cùng tháng 2019 = 100."
+        )
+    )
+
 
 
 def _treemap(D):
     m = D["master"]
     end = dl.latest_date(m)
     c1, c2 = st.columns([1, 1.4])
-    years = sorted(m["year"].unique(), reverse=True)
-    year = c1.selectbox("Năm", years, index=0, key="m7_tree_year",
-                        help=f"Cộng dồn tháng 1–{end.month} của năm được chọn, để các năm so sánh công bằng với năm mới nhất.")
+    years = sorted(
+        m.loc[m["arrivals"].notna(), "year"]
+        .dropna()
+        .astype(int)
+        .unique()
+        .tolist(),
+        reverse=True
+    )
+
+    year = c1.selectbox(
+        "Năm",
+        years,
+        index=0,
+        key="m7_tree_year",
+        help="Chọn năm để xem quy mô lượt khách theo thị trường."
+    )
     mode = c2.radio("Tô màu theo", ["Khu vực", "Chỉ số phục hồi"], horizontal=True, key="m7_tree_mode")
 
-    sub = m.loc[(m["year"] == year) & m["month"].le(end.month) & m["arrivals"].notna()].copy()
+    # Năm đã hoàn tất: lấy đủ 12 tháng.
+    # Năm mới nhất: chỉ lấy đến tháng có dữ liệu gần nhất.
+    month_limit = end.month if year == end.year else 12
+
+    sub = m.loc[
+        (m["year"] == year)
+        & (m["month"] <= month_limit)
+        & m["arrivals"].notna()
+    ].copy()
     both = sub.loc[sub["baseline_2019"].gt(0)]
     agg = sub.groupby(["continent", "market"])["arrivals"].sum().rename("arr").to_frame()
     agg["a_b"] = both.groupby(["continent", "market"])["arrivals"].sum()
