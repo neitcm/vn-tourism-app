@@ -232,10 +232,16 @@ def _explorer_free(D):
         c3, c4 = st.columns([1.1, 1.5])
         metric = c3.radio("③ Chỉ số hiển thị", ["Chỉ số phục hồi (2019 = 100)", "Lượt khách mỗi tháng", "Tỷ trọng trong tổng"],
                           key="ex_metric")
-        d0 = pd.Timestamp("2022-01-01")
+        d0 = pd.Timestamp("2017-01-01")
         start_default = d0 if d0 in all_dates else all_dates[0]
-        rng = c4.select_slider("④ Khoảng thời gian", options=all_dates, value=(start_default, all_dates[-1]),
-                               format_func=ui.mlabel, key="ex_range")
+
+        rng = c4.select_slider(
+            "④ Khoảng thời gian",
+            options=all_dates,
+            value=(start_default, all_dates[-1]),
+            format_func=ui.mlabel,
+            key="ex_range"
+        )
         c5, c6, _ = st.columns([1.1, 1.1, 1.4])
         smooth = c5.toggle("⑤ Làm mượt 3 tháng", value=False, help="Trung bình trượt 3 tháng để giảm răng cưa mùa vụ.")
         show_base = c6.toggle("⑥ Hiện mốc 2019 = 100", value=True)
@@ -503,7 +509,7 @@ def page_season(D):
                                      hovertemplate=f"<b>{dest}</b> %{{x}}: %{{y:.0f}} giờ<extra></extra>"))
         ui.style_fig(fig, 300)
         fig.update_yaxes(title="Số giờ nắng trung vị")
-        ui.chart_title("Số giờ nắng theo tháng", "Trung vị 2019–2025")
+        ui.chart_title("Số giờ nắng theo tháng", "Trung vị 2017–2025")
         ui.show(fig, key="se_sun")
         ui.source("Open-Meteo Historical Weather qua M2.")
         ui.card("<p>⚠️ Số khách trong master là <b>toàn quốc</b>, còn thời tiết chỉ đo ở Đà Nẵng và Nha Trang — "
