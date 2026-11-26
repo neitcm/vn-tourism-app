@@ -149,6 +149,8 @@ div[data-testid="stMetric"] {{ background:#fff; border:1px solid {SAND_DARK}; bo
 .js-plotly-plot .plotly .modebar {{
   top: 4px !important;
   right: 6px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
   background: rgba(255,255,255,0.92) !important;
   border: 1px solid {SAND_DARK} !important;
   border-radius: 10px !important;
