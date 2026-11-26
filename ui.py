@@ -124,8 +124,15 @@ section[data-testid="stSidebar"] .stRadio label:hover {{ background: rgba(255,25
 .card p, .card li {{ font-size:.93rem; color:#3B3F3A; }}
 .tag {{ display:inline-block; padding:.12rem .6rem; border-radius:999px; font-size:.74rem; font-weight:700; margin:.1rem .25rem .1rem 0; }}
 .chart-title {{ font-weight:800; font-size:1.12rem; color:{INK}; margin:.2rem 0 0; }}
-.chart-sub {{ color:{MUTED}; font-size:.86rem; margin:0 0 .2rem; }}
+.chart-sub {{ color:{MUTED}; font-size:.86rem; margin:0 0 .35rem; }}
 .src {{ color:{MUTED}; font-size:.76rem; margin-top:-.4rem; }}
+.guide-box {{ background:#fff; border:1px solid {SAND_DARK}; border-left:4px solid {SEA}; border-radius:12px;
+  padding:.75rem 1rem; margin:.2rem 0 .85rem; font-size:.88rem; color:{INK}; }}
+.guide-box .guide-title {{ font-weight:700; margin-bottom:.25rem; color:{SEA_DEEP}; }}
+.scale-grid {{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.6rem; margin-top:.45rem; }}
+.scale-item {{ background:{SAND}; border:1px solid {SAND_DARK}; border-radius:10px; padding:.5rem .7rem; }}
+.scale-item .num {{ font-size:1.25rem; font-weight:800; color:{INK}; line-height:1.15; }}
+.scale-item .desc {{ font-size:.8rem; color:{MUTED}; margin-top:.15rem; }}
 .pill-ok {{ background:#E6F1E1; color:#25533F; }} .pill-warn {{ background:#FCE8C2; color:#8A5A10; }}
 .pill-bad {{ background:#FBDDD0; color:#9C3A08; }}
 
@@ -173,6 +180,28 @@ def source(text: str):
 
 def card(body: str, kind: str = ""):
     st.markdown(f"<div class='card {kind}'>{body}</div>", unsafe_allow_html=True)
+
+
+def page_header(icon: str, title: str, text: str, guide: str = ""):
+    """Hiển thị tiêu đề trang, mô tả và hướng dẫn đọc ngắn (nếu có)."""
+    st.markdown(
+        f"<h2 style='margin:.2rem 0 .15rem;font-weight:800'>{icon} {title}</h2>"
+        f"<p style='color:{MUTED};margin:0 0 .65rem;font-size:1rem'>{text}</p>",
+        unsafe_allow_html=True,
+    )
+    if guide:
+        st.markdown(
+            f"<div class='guide-box'><div class='guide-title'>Hướng dẫn đọc nhanh</div>{guide}</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def guide_box(title: str, body_html: str):
+    """Khung chú giải gọn đặt dưới bộ lọc hoặc trước biểu đồ."""
+    st.markdown(
+        f"<div class='guide-box'><div class='guide-title'>{title}</div>{body_html}</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def style_fig(fig, height: int = 420, legend: bool = True, margin=None):

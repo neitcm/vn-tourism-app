@@ -24,13 +24,12 @@ DATA = Path(__file__).parent / "data"
 DIV_SCALE = [[i / (len(hs.DIV_COLORS) - 1), c] for i, c in enumerate(hs.DIV_COLORS)]  # 0 -> 100 -> 200, 100 ở giữa
 REGION_ORDER = ["Châu Á", "Châu Âu", "Châu Mỹ", "Châu Úc"]
 REGION_COLOR = dict(zip(REGION_ORDER, hs.CAT_COLORS))  # đúng như notebook M7/M8
-CLUSTER_NAME = {1: "Thị trường xa - Mùa vụ rõ hơn", 2: "Thị trường gần - Mùa vụ nhẹ hơn"}
+CLUSTER_NAME = {1: "Thị trường xa – Mùa vụ rõ hơn", 2: "Thị trường gần – Mùa vụ nhẹ hơn"}
 VIETNAM = (21.0, 105.8)  # Hà Nội, điểm đại diện cho Việt Nam (như M8)
 
 
-def _header(icon, title, text):
-    st.markdown(f"<h2 style='margin:.2rem 0 .1rem;font-weight:800'>{icon} {title}</h2>"
-                f"<p style='color:{MUTED};margin:0 0 .8rem;font-size:1rem'>{text}</p>", unsafe_allow_html=True)
+def _header(icon, title, text, guide=""):
+    ui.page_header(icon, title, text, guide)
 
 
 def _region_color(r: str) -> str:
@@ -39,8 +38,13 @@ def _region_color(r: str) -> str:
 
 # ============================================================ M7
 def page_many_dimensions(D):
-    _header("🧩", "Đa chiều", "Nhìn cùng lúc nhiều chiều: thị trường × thời gian × quy mô × đặc điểm — bằng bản đồ nhiệt, treemap và đường song song.")
-    t1, t2, t3, t4 = st.tabs(["🔥 Bản đồ nhiệt", "🟦 Treemap", "📈 Đường song song", "📝 Quyết định thiết kế"])
+    _header(
+        "🧩",
+        "So sánh thị trường qua nhiều góc nhìn",
+        "Xem sự thay đổi lượng khách theo thời gian, so sánh quy mô giữa các thị trường và nhận diện những đặc điểm khác biệt giữa các nhóm.",
+        "Chuyển giữa 3 góc nhìn dữ liệu ở các tab bên dưới; tab cuối cùng giải thích nguyên tắc thiết kế và cách đọc từng biểu đồ.",
+    )
+    t1, t2, t3, t4 = st.tabs(["🔥 Biến động theo tháng", "🟦 Quy mô thị trường", "📈 So sánh đặc điểm", "📝 Cách xây dựng biểu đồ"])
     with t1:
         _heatmap(D)
     with t2:
@@ -150,8 +154,7 @@ def _heatmap(D):
         ))
 
         subtitle = (
-            "Mỗi ô thể hiện số lượt khách thực tế của từng thị trường "
-            "theo tháng. Có thể xem dữ liệu từ năm 2017."
+            "Mỗi ô thể hiện số lượt khách thực tế của từng thị trường theo tháng. Màu càng đậm, lượng khách càng lớn."
         )
 
     else:
@@ -179,8 +182,8 @@ def _heatmap(D):
         ))
 
         subtitle = (
-            "Mỗi ô là chỉ số phục hồi so với cùng tháng năm 2019 = 100. "
-            "Dữ liệu trước năm 2019 không có chỉ số phục hồi."
+            "Mỗi ô là chỉ số phục hồi so với cùng tháng năm 2019 (= 100). "
+            "Cam: dưới 100 · Xám: quanh 100 · Xanh: trên 100. Dữ liệu trước năm 2019 chưa có chỉ số phục hồi."
         )
 
     ui.style_fig(
@@ -194,14 +197,14 @@ def _heatmap(D):
     fig.update_xaxes(tickformat="%Y", dtick="M12", showgrid=False)
 
     ui.chart_title(
-        f"{len(piv)} thị trường · {y0}–{end.year}",
+        f"Biến động {metric.lower()} của {len(piv)} thị trường ({y0}–{end.year})",
         subtitle
     )
 
     ui.show(fig, key="m7_heat")
 
     ui.source(
-        "Master table M2. "
+        "Bảng dữ liệu tổng hợp VNAT/NSO. "
         + (
             "Giá trị là lượt khách thực tế."
             if metric == "Lượt khách thực tế"
@@ -231,7 +234,16 @@ def _treemap(D):
         key="m7_tree_year",
         help="Chọn năm để xem quy mô lượt khách theo thị trường."
     )
-    mode = c2.radio("Tô màu theo", ["Khu vực", "Chỉ số phục hồi"], horizontal=True, key="m7_tree_mode")
+    mode = c2.radio("Màu sắc thể hiện", ["Khu vực", "Chỉ số phục hồi"], horizontal=True, key="m7_tree_mode")
+
+    ui.guide_box(
+        "Cách đọc biểu đồ quy mô thị trường",
+        "<ul style='margin:.2rem 0 0 1.1rem;padding:0'>"
+        "<li>Diện tích ô càng lớn, lượng khách càng nhiều.</li>"
+        "<li>Màu sắc thể hiện khu vực hoặc chỉ số phục hồi (tùy lựa chọn ở trên).</li>"
+        "<li>Chọn năm để xem quy mô thị trường trong năm đó (nhấp vào ô khu vực để phóng to từng thị trường).</li>"
+        "</ul>",
+    )
 
     # Năm đã hoàn tất: lấy đủ 12 tháng.
     # Năm mới nhất: chỉ lấy đến tháng có dữ liệu gần nhất.
@@ -282,11 +294,14 @@ def _treemap(D):
     ui.style_fig(fig, 560, legend=False, margin=dict(l=5, r=5, t=5, b=5))
     top = reg.sort_values("arr", ascending=False).iloc[0]
     share = top["arr"] / reg["arr"].sum()
-    ui.chart_title(f"{top['continent']} chiếm {ui.n0(100 * share)}% lượt khách trong {len(agg)} thị trường, T1–T{end.month}/{year}",
-                   "Diện tích ô theo số lượt khách · lồng theo khu vực → thị trường"
-                   + (" · màu = chỉ số phục hồi cùng kỳ 2019" if mode == "Chỉ số phục hồi" else " · màu = khu vực"))
+    display_month = end.month if year == end.year else 12
+    ui.chart_title(
+        f"{top['continent']} chiếm {ui.n0(100 * share)}% lượt khách trong {len(agg)} thị trường",
+        f"Lượng khách cộng dồn từ T1–T{display_month}/{year} · lồng theo khu vực → thị trường"
+        + (" · màu = chỉ số phục hồi so với cùng kỳ 2019" if mode == "Chỉ số phục hồi" else " · màu = khu vực"),
+    )
     ui.show(fig, key="m7_tree")
-    ui.source("Master table M2, cộng dồn các tháng có số liệu."
+    ui.source("Bảng dữ liệu tổng hợp VNAT/NSO, cộng dồn các tháng có số liệu."
               + (f" Ẩn vì chưa có mốc 2019: {', '.join(dropped)}." if dropped else ""))
 
 
@@ -325,20 +340,20 @@ def _parallel(D):
     fig.update_yaxes(title="Giá trị chuẩn hoá (z-score)", showgrid=True, gridcolor=GRID)
     fig.update_xaxes(showgrid=True, gridcolor=GRID)
     ui.chart_title("Nhóm thị trường xa có biên độ mùa vụ trung bình cao hơn",
-                   f"Mỗi đường là một thị trường ({len(seg)} thị trường) · màu = cụm M6 · đường đứt = trung bình mẫu")
+                   f"Mỗi đường biểu diễn một thị trường ({len(seg)} thị trường) · màu = nhóm thị trường · đường nét đứt tại mức 0 = trung bình mẫu")
     ui.show(fig, key="m7_par")
-    ui.source("Master table M2; đặc trưng và z-score tái lập theo M6.")
+    ui.source("Bảng dữ liệu tổng hợp VNAT/NSO; các đặc trưng được chuẩn hóa theo z-score.")
 
 
 def _m7_design():
-    ui.card("<h4>7.1 Heatmap</h4><p>Các hàng mặc định xếp theo tên thị trường để dễ tra cứu (có thể đổi sang tổng lượt khách hoặc chỉ số mới nhất), "
-            "các cột đi theo thứ tự tháng. Mỗi ô là chỉ số lượt khách so với cùng tháng năm 2019. Thang màu phân kỳ đặt mốc 100 ở giữa. "
-            "Ô trắng là tháng thiếu chỉ số; chỉ số trên 200 dùng chung màu ở đầu thang. Thị trường không có chỉ số nào trong kỳ bị ẩn.</p>"
-            "<h4>7.2 Treemap</h4><p>Ô lồng theo khu vực → thị trường; diện tích tỷ lệ với tổng lượt khách trong các tháng đã chọn. "
-            "Màu mặc định phân biệt khu vực; có thể đổi sang chỉ số phục hồi để thêm một chiều thứ ba.</p>"
-            "<h4>7.3 Parallel coordinates</h4><p>Trục xếp từ tốc độ phục hồi và tăng trưởng sang đặc điểm mùa vụ rồi khoảng cách; "
-            "hai trục sin và cos đặt cạnh nhau vì cùng biểu diễn tháng cao điểm theo chu kỳ. Các trục dùng z-score của M6 để so sánh trên cùng thang đo. "
-            "Mỗi đường là một thị trường, màu đường là cụm M6, đường đứt tại 0 là trung bình mẫu.</p>")
+    ui.card("<h4>1. Biến động theo tháng (Heatmap)</h4><p>Các hàng mặc định sắp xếp theo tên thị trường để dễ tra cứu (có thể đổi sang tổng lượt khách hoặc chỉ số mới nhất), "
+            "các cột đi theo thứ tự thời gian từng tháng. Khi chọn chỉ số phục hồi, thang màu phân kỳ đặt mốc 100 (= năm 2019) ở giữa: "
+            "cam là chưa phục hồi, xám là quanh mốc 2019, xanh là vượt mốc 2019; giá trị trên 200 dùng chung màu đầu thang để tránh ngoại lệ làm mờ phần còn lại.</p>"
+            "<h4>2. Quy mô thị trường (Treemap)</h4><p>Các ô lồng theo cấp khu vực → thị trường; diện tích mỗi ô tỷ lệ thuận với tổng lượt khách cộng dồn trong các tháng có dữ liệu của năm đã chọn. "
+            "Màu mặc định phân biệt khu vực địa lý, hoặc chuyển sang chỉ số phục hồi để quan sát đồng thời quy mô và mức độ phục hồi.</p>"
+            "<h4>3. So sánh đặc điểm (Đường song song · Parallel coordinates)</h4><p>Các trục sắp xếp từ tốc độ phục hồi và tăng trưởng sang đặc điểm mùa vụ rồi khoảng cách địa lý; "
+            "hai trục sin và cos đặt cạnh nhau vì cùng biểu diễn tháng cao điểm theo chu kỳ năm. Mọi trục được chuẩn hóa về cùng thang đo (z-score), "
+            "với đường nét đứt tại mức 0 thể hiện giá trị trung bình của toàn bộ các thị trường.</p>")
 
 
 # ============================================================ M8
@@ -405,16 +420,21 @@ def _load_m8_log() -> pd.DataFrame | None:
 
 def page_beyond_flat(D):
     m = D["master"]
-    _header("🌍", "Góc nhìn 3D & 2D", "Cùng một dữ liệu luồng khách, hai cách nhìn: quả địa cầu 3D và bản đồ phẳng 2D — và nhóm đã thử xem cách nào thật sự nhanh hơn.")
-    t1, t2, t3 = st.tabs(["🗺️ Địa cầu 3D & bản đồ 2D", "📊 Thanh xếp hạng (đối chứng)", "🧪 Kết quả thử nghiệm 2D vs 3D"])
+    _header(
+        "🌍",
+        "Bản đồ thị trường khách quốc tế",
+        "Quan sát các thị trường gửi khách đến Việt Nam trên bản đồ 2D và địa cầu 3D. So sánh khả năng đọc dữ liệu của hai cách thể hiện.",
+        "Chọn cách hiển thị và tháng phân tích ở phía trên; chuyển sang tab <b>Xếp hạng thị trường</b> để đối chiếu số liệu chính xác hoặc tab <b>Kết quả kiểm thử</b> để xem đánh giá 2D vs 3D.",
+    )
+    t1, t2, t3 = st.tabs(["🗺️ Bản đồ 2D và địa cầu 3D", "📊 Xếp hạng thị trường", "🧪 Kết quả kiểm thử"])
 
     dates = [pd.Timestamp(x) for x in sorted(m["date"].unique())]
     avail = [d for d in dates if (m.loc[m["date"] == d, "baseline_2019"].gt(0) & m.loc[m["date"] == d, "arrivals"].notna()).sum() >= 10]
     with t1:
         c1, c2, c3 = st.columns([1.1, 1.3, 1])
-        view = c1.radio("Chế độ xem", ["Địa cầu 3D", "Bản đồ 2D", "Cạnh nhau"], horizontal=True, key="m8_view")
-        date = c2.select_slider("Tháng", options=avail, value=avail[-1], format_func=ui.mlabel, key="m8_month")
-        rot = c3.slider("Xoay địa cầu (kinh độ)", -180, 180, 85, key="m8_rot", help="Chỉ áp dụng cho địa cầu 3D.")
+        view = c1.radio("Cách hiển thị", ["Địa cầu 3D", "Bản đồ 2D", "Cạnh nhau"], horizontal=True, key="m8_view")
+        date = c2.select_slider("Tháng phân tích", options=avail, value=avail[-1], format_func=ui.mlabel, key="m8_month")
+        rot = c3.slider("Xoay góc nhìn", -180, 180, 85, key="m8_rot", help="Điều chỉnh góc xoay kinh độ (chỉ áp dụng cho chế độ Địa cầu 3D).")
         f, missing = _flow_table(m, date)
         reg = f.groupby("continent")[["arrivals", "baseline_2019"]].sum()
         reg["idx"] = 100 * reg["arrivals"] / reg["baseline_2019"]
@@ -423,8 +443,11 @@ def page_beyond_flat(D):
         for col, (name, r) in zip(cols, reg.iterrows()):
             ui.kpi(col, name, ui.n0(r["idx"]), f"{ui.big(r['arrivals'])} lượt · chỉ số phục hồi khu vực")
         st.write("")
-        title = f"Luồng khách đến Việt Nam {ui.mlabel(date)}: {reg.index[0]} có chỉ số phục hồi cao nhất ({ui.n0(reg['idx'].iloc[0])})"
-        ui.chart_title(title, f"Kích thước điểm = lượt khách · màu = khu vực · chỉ số phục hồi: cùng tháng 2019 = 100 · {len(f)} thị trường có mốc so sánh")
+        title = f"Lượng khách từ các thị trường quốc tế đến Việt Nam ({ui.mlabel(date)})"
+        ui.chart_title(
+            title,
+            f"Kích thước điểm thể hiện lượng khách; màu sắc phân biệt khu vực. Di chuột vào từng điểm để xem số khách và chỉ số phục hồi (khu vực dẫn đầu: {reg.index[0]} · {ui.n0(reg['idx'].iloc[0])}).",
+        )
         if view == "Cạnh nhau":
             a, b = st.columns(2)
             with a:
@@ -437,8 +460,8 @@ def page_beyond_flat(D):
             ui.show(_draw_map(f, "orthographic", "Quả địa cầu 3D", date, rot), key="m8_globe")
         else:
             ui.show(_draw_map(f, "natural earth", "Bản đồ 2D", date, rot), key="m8_flat")
-        ui.source("Master table M2; toạ độ đại diện từng thị trường (thủ đô) theo M8."
-                  + (f" Chưa có toạ độ nên không vẽ: {', '.join(missing)}." if missing else ""))
+        ui.source("Bảng dữ liệu tổng hợp VNAT/NSO; tọa độ đại diện từng thị trường (thủ đô)."
+                  + (f" Chưa có tọa độ nên không hiển thị: {', '.join(missing)}." if missing else ""))
     with t2:
         metric = st.radio("Xếp hạng theo", ["Chỉ số phục hồi", "Lượt khách"], horizontal=True, key="m8_bar_metric")
         f2, _ = _flow_table(m, avail[-1])
@@ -450,24 +473,25 @@ def page_beyond_flat(D):
             customdata=np.stack([s["arrivals"], s["market_recovery"]], 1),
             hovertemplate="<b>%{y}</b><br>Lượt khách: %{customdata[0]:,.0f}<br>Chỉ số: %{customdata[1]:.0f}<extra></extra>"))
         if key == "market_recovery":
-            fig.add_vline(x=100, line_dash="dot", line_color=INK)
+            fig.add_vline(x=100, line_dash="dot", line_color=INK, annotation_text="Mốc 2019 = 100", annotation_position="top right")
         ui.style_fig(fig, 60 + 26 * len(s), legend=False, margin=dict(l=10, r=60, t=10, b=10))
         fig.update_yaxes(showgrid=False)
         fig.update_xaxes(visible=False)
-        ui.chart_title(f"20 thị trường đứng đầu theo {metric.lower()}, {ui.mlabel(avail[-1])}", "Màu = khu vực (cùng bảng màu với bản đồ)")
+        ui.chart_title(f"20 thị trường dẫn đầu theo {metric.lower()} ({ui.mlabel(avail[-1])})",
+                       "Màu sắc phân biệt khu vực (đồng bộ với bản đồ). Đường chấm dọc (nếu có) đánh dấu mốc năm 2019 = 100.")
         ui.show(fig, key="m8_bars")
-        ui.source("Master table M2.")
+        ui.source("Bảng dữ liệu tổng hợp VNAT/NSO.")
     with t3:
         _m8_experiment()
 
 
 def _m8_experiment():
-    ui.card("<h4>Cách thử</h4><p>Năm người ngoài nhóm trả lời cùng ba câu hỏi trên bản đồ 2D và quả địa cầu 3D. Thứ tự xem được xáo "
-            "(ba người xem 3D trước, hai người xem 2D trước). Nhóm ghi thời gian và chấm đúng/sai từng câu: 15 lượt trả lời mỗi phiên bản.</p>", "sea")
+    ui.card("<h4>Phương pháp kiểm thử</h4><p>Năm người ngoài nhóm thực hiện trả lời cùng ba câu hỏi trên bản đồ 2D và địa cầu 3D. Thứ tự tiếp xúc được đảo ngẫu nhiên "
+            "(ba người xem 3D trước, hai người xem 2D trước). Nhóm đo thời gian và chấm độ chính xác từng câu: tổng cộng 15 lượt trả lời cho mỗi phiên bản.</p>", "sea")
     st.write("")
     c = st.columns(4)
-    ui.kpi(c[0], "Độ chính xác 2D", "15/15", "100% câu đúng")
-    ui.kpi(c[1], "Độ chính xác 3D", "15/15", "100% câu đúng")
+    ui.kpi(c[0], "Độ chính xác 2D", "15/15", "100% câu trả lời đúng")
+    ui.kpi(c[1], "Độ chính xác 3D", "15/15", "100% câu trả lời đúng")
     ui.kpi(c[2], "Thời gian trung bình · 2D", "13,7 giây", "mỗi câu")
     ui.kpi(c[3], "Thời gian trung bình · 3D", "24,0 giây", "mỗi câu · chậm hơn 10,3 giây")
     st.write("")
@@ -484,7 +508,7 @@ def _m8_experiment():
         fig.update_layout(barmode="group")
         ui.style_fig(fig, 380)
         fig.update_yaxes(title="Giây/câu trung bình")
-        ui.chart_title("Thời gian trả lời trung bình từng câu: bản đồ 2D so với địa cầu 3D", f"{log['person'].nunique() if 'person' in log else 5} người thử · dữ liệu từ M8_Experiment_Results.csv")
+        ui.chart_title("Thời gian trả lời trung bình từng câu: bản đồ 2D so với địa cầu 3D", f"{log['person'].nunique() if 'person' in log else 5} người tham gia · dữ liệu từ nhật ký kiểm thử")
         ui.show(fig, key="m8_exp_full")
     else:
         fig = go.Figure()
@@ -494,10 +518,10 @@ def _m8_experiment():
         fig.update_layout(barmode="group")
         ui.style_fig(fig, 380)
         fig.update_yaxes(title="Giây/câu trung bình", range=[0, 40])
-        ui.chart_title("Bản đồ 2D cho câu trả lời nhanh hơn quả địa cầu 3D, cùng độ chính xác",
-                       "5 người thử · 15 lượt trả lời mỗi phiên bản · số liệu tổng hợp từ M8")
+        ui.chart_title("Bản đồ 2D giúp tìm thông tin nhanh hơn địa cầu 3D với cùng độ chính xác",
+                       "5 người tham gia · 15 lượt trả lời mỗi phiên bản")
         ui.show(fig, key="m8_exp_sum")
-    ui.card("<h4>Kết luận</h4><p>Trong ba tác vụ đã thử, <b>bản đồ 2D phù hợp hơn để tra cứu nhanh</b>, với cùng độ chính xác như bản 3D "
-            "(câu hỏi về khu vực có chỉ số phục hồi cao nhất: 18,6 giây ở 2D so với 33,4 giây ở 3D). "
-            "Quả địa cầu 3D vẫn hữu ích để gây ấn tượng và cảm nhận khoảng cách, nhưng không nên là công cụ chính để đọc số liệu.</p>"
-            "<h4>Giới hạn</h4><p>Chỉ có năm người thử. Lặp lại cùng bộ câu hỏi ở hai phiên bản có thể khiến người thử nhớ đáp án từ lượt đầu và ảnh hưởng thời gian ở lượt sau.</p>")
+    ui.card("<h4>Kết quả chính</h4><p><b>Kết quả kiểm thử cho thấy bản đồ 2D giúp người tham gia tìm thông tin nhanh hơn địa cầu 3D, trong khi tỷ lệ trả lời đúng ở hai phiên bản tương đương</b> "
+            "(câu hỏi xác định khu vực có chỉ số phục hồi cao nhất: 18,6 giây ở bản 2D so với 33,4 giây ở bản 3D). "
+            "Địa cầu 3D vẫn có giá trị khi muốn quan sát vị trí địa lý và tạo góc nhìn tổng thể, nhưng bản đồ 2D phù hợp hơn với nhu cầu tra cứu số liệu.</p>"
+            "<h4>Giới hạn nghiên cứu</h4><p>Kiểm thử mới thực hiện trên nhóm năm người tham gia. Việc lặp lại cùng bộ câu hỏi giữa hai phiên bản có thể khiến người tham gia ghi nhớ đáp án từ lượt đầu và ảnh hưởng đến thời gian ở lượt sau.</p>")

@@ -22,8 +22,11 @@ ui.inject_css()
 
 PLOTLY_MARKER = {"o": "circle", "s": "square", "^": "triangle-up", "D": "diamond", "v": "triangle-down", "P": "cross"}
 DIV_SCALE = [[i / (len(hs.DIV_COLORS) - 1), c] for i, c in enumerate(hs.DIV_COLORS)]
-CLUSTER_NAME = {1: "Thị trường xa - Mùa vụ rõ hơn", 2: "Thị trường gần - Mùa vụ nhẹ hơn"}
-CLUSTER_ACTION = {1: "Kiểm tra đường bay và thời gian đặt tour.", 2: "Thử gói ngắn ngày ở các tháng còn công suất."}
+CLUSTER_NAME = {1: "Thị trường xa – Mùa vụ rõ hơn", 2: "Thị trường gần – Mùa vụ nhẹ hơn"}
+CLUSTER_ACTION = {
+    1: "Theo dõi lịch bay dài hạn và thời điểm đặt tour trước mùa cao điểm.",
+    2: "Cân nhắc các gói lưu trú ngắn ngày vào những tháng công suất còn thấp.",
+}
 
 
 # ============================================================ dữ liệu (cache)
@@ -38,12 +41,11 @@ def get_data():
     )
 
 
-def page_header(icon, title, text):
-    st.markdown(f"<h2 style='margin:.2rem 0 .1rem;font-weight:800'>{icon} {title}</h2>"
-                f"<p style='color:{MUTED};margin:0 0 .8rem;font-size:1rem'>{text}</p>", unsafe_allow_html=True)
+def page_header(icon, title, text, guide=""):
+    ui.page_header(icon, title, text, guide)
 
 
-def add_gap_band(fig, start="2020-04-01", end="2021-12-31", text="Nguồn không có số liệu theo thị trường"):
+def add_gap_band(fig, start="2020-04-01", end="2021-12-31", text="Không có số liệu theo thị trường"):
     mid = (pd.Timestamp(start) + (pd.Timestamp(end) - pd.Timestamp(start)) / 2).strftime("%Y-%m-%d")
     fig.add_shape(type="rect", xref="x", yref="paper", x0=start, x1=end, y0=0, y1=1,
                   fillcolor=GRID, opacity=0.55, line_width=0, layer="below")
@@ -62,39 +64,42 @@ def page_story(D):
     best = has_base.sort_values("gap", ascending=False).head(3)
 
     ui.hero(
-        "Khách quốc tế đã trở lại Việt Nam — nhưng không phải ai cũng trở lại như nhau",
-        f"Theo dõi {m['market'].nunique()} thị trường nguồn từ 2017 đến {ui.mlabel(end)}: ai đã vượt mức trước đại dịch, "
-        "ai còn chậm chân, và Ban Du lịch nên làm gì tiếp theo.",
-        ["Du lịch quốc tế", f"Dữ liệu đến {ui.mlabel(end)}", "So với 2019 = 100"],
+        "Du lịch quốc tế Việt Nam: Phục hồi đến đâu sau đại dịch?",
+        f"Theo dõi lượng khách từ {m['market'].nunique()} thị trường quốc tế giai đoạn 2017–{end.year} (dữ liệu đến {ui.mlabel(end)}), "
+        "so sánh với năm 2019 để nhận diện những thị trường đã phục hồi và những thị trường còn khoảng cách cần thu hẹp.",
+        ["Tổng quan phục hồi", f"Dữ liệu đến {ui.mlabel(end)}", "Mốc so sánh: 2019 = 100"],
     )
     st.write("")
     c = st.columns(4)
     d_idx = tot["index"] - 100
-    ui.kpi(c[0], f"{ui.mlabel(end)} so với cùng tháng 2019", ui.n1(tot["index"]),
-           f"<span class='{'up' if d_idx >= 0 else 'down'}'>{ui.pct(d_idx)}</span> · {tot['n']} thị trường có mốc 2019")
+    ui.kpi(c[0], f"Chỉ số phục hồi ({ui.mlabel(end)})", ui.n1(tot["index"]),
+           f"<span class='{'up' if d_idx >= 0 else 'down'}'>{ui.pct(d_idx)}</span> so với cùng tháng 2019 · {tot['n']} thị trường có mốc so sánh")
     g_prev = 100 * (ytd["this"] / ytd["prev"] - 1)
     ui.kpi(c[1], f"Lũy kế T1–T{ytd['month']}/{ytd['year']}", ui.big(ytd["this"]),
            f"<span class='{'up' if g_prev >= 0 else 'down'}'>{ui.pct(g_prev)}</span> so với cùng kỳ {ytd['year'] - 1}")
     g_base = 100 * (ytd["this"] / ytd["base"] - 1)
-    ui.kpi(c[2], "Lũy kế so với 2019", ui.pct(g_base), f"cùng {ytd['month']} tháng · {ytd['n']} thị trường đủ số liệu")
-    ui.kpi(c[3], "Thị trường đã vượt 2019", f"{len(above)}/{len(has_base)}",
-           f"{len(below)} thị trường còn dưới 2019 (chỉ số &lt; 95)")
+    ui.kpi(c[2], "Lũy kế so với cùng kỳ 2019", ui.pct(g_base), f"Tính trên {ytd['month']} tháng đầu năm · {ytd['n']} thị trường đủ số liệu")
+    ui.kpi(c[3], "Thị trường đã vượt mốc 2019", f"{len(above)}/{len(has_base)}",
+           f"{len(below)} thị trường vẫn dưới mốc 2019 (chỉ số &lt; 95)")
 
-    # ---- Big Idea v1
+    # ---- Điểm đáng chú ý
     st.write("")
     names_worst = " và ".join(worst["market"])
     names_best = ", ".join(best["market"])
-    idx_w = ", ".join(f"{r.market} {ui.n0(r.recovery_index)}" for r in worst.itertuples())
+    idx_w = ", ".join(f"{r.market}: {ui.n0(r.recovery_index)}" for r in worst.itertuples())
     ui.card(
-        f"<h4>💡 Big Idea v1 <span class='tag pill-warn'> Draft </span></h4>"
-        f"<p style='font-size:1.05rem'><b>Việt Nam đã vượt mốc 2019 (chỉ số {ui.n0(tot['index'])}), nhưng đà tăng đến từ nhiều thị trường "
-        f"mới nổi, còn hai thị trường đang thiếu khách nhiều nhất ({names_worst}) vẫn dưới 2019</b> ({idx_w}) — "
-        f"nên bước tiếp theo là kéo họ trở lại và giữ đà ở {names_best}.</p>"
-        f"<p style='color:{MUTED};font-size:.86rem;margin:0'>Mọi con số tính từ master table M2; so sánh cùng tập thị trường có mốc 2019.</p>",
+        f"<h4>Điểm đáng chú ý</h4>"
+        f"<p style='font-size:1.03rem'>Tổng lượng khách trong {ui.mlabel(end)} đạt chỉ số phục hồi <b>{ui.n0(tot['index'])}</b> "
+        f"(vượt mốc trước đại dịch = 100), nhưng mức phục hồi giữa các thị trường vẫn khác nhau. "
+        f"Những thị trường đóng góp nhiều lượt khách tăng thêm nhất so với cùng kỳ 2019 gồm <b>{names_best}</b>, "
+        f"trong khi một số thị trường quy mô lớn như <b>{names_worst}</b> vẫn chưa trở lại mức năm 2019 ({idx_w}). "
+        f"Vì vậy, cần xem xét riêng từng thị trường thay vì chỉ dựa vào tổng lượng khách.</p>"
+        f"<p style='color:{MUTED};font-size:.86rem;margin:0'>Mọi chỉ số được tính trên cùng tập thị trường có đủ dữ liệu so sánh với năm 2019.</p>",
         "sun")
 
-    # ---- Chương 1: điểm xuất phát
-    ui.chapter(1, "Điểm xuất phát: năm 2019", "Top thị trường theo tổng lượt khách 2019 — mốc mà mọi chỉ số 'phục hồi' so sánh với.")
+    # ---- Chương 1: trước đại dịch
+    ui.chapter(1, "Trước đại dịch, những thị trường nào gửi nhiều khách đến Việt Nam?",
+               "Tổng lượt khách năm 2019 của 10 thị trường lớn nhất — đây là mốc so sánh cho toàn bộ chỉ số phục hồi trong dashboard.")
     y19 = m.loc[(m["year"] == 2019) & m["arrivals"].notna()].groupby("market")["arrivals"].agg(["sum", "count"])
     y19 = y19[y19["count"] == 12].sort_values("sum", ascending=False).head(10).iloc[::-1]
     fig = go.Figure(go.Bar(
@@ -108,12 +113,13 @@ def page_story(D):
     full19 = full19[full19["count"] == 12]["sum"].sort_values(ascending=False)
     share2 = 100 * full19.head(2).sum() / full19.sum()
     ui.chart_title(f"{full19.index[0]} và {full19.index[1]} chiếm {ui.n0(share2)}% lượt khách năm 2019",
-                   f"Tổng lượt khách 2019, 10 thị trường lớn nhất · phần trăm tính trên {len(full19)} thị trường đủ 12 tháng")
+                   f"10 thị trường có tổng lượt khách năm 2019 cao nhất · tỷ trọng tính trên {len(full19)} thị trường đủ dữ liệu 12 tháng")
     ui.show(fig, key="s1")
-    ui.source("VNAT/NSO qua master table M2.")
+    ui.source("Cục Du lịch Quốc gia Việt Nam (VNAT) và Tổng cục Thống kê (NSO).")
 
     # ---- Chương 2: gián đoạn
-    ui.chapter(2, "Gián đoạn 2020–2021", "Chỉ số gộp rơi gần như về đáy ngay quý I/2020; sau đó nguồn không có số liệu theo thị trường.")
+    ui.chapter(2, "Đại dịch đã làm lượng khách giảm mạnh như thế nào?",
+               "Đọc đường chỉ số phục hồi gộp từ năm 2017 đến giữa 2022; đường chấm ngang là mốc năm 2019 (= 100), vùng xám là giai đoạn thiếu số liệu theo thị trường.")
     ts = dl.total_index_series(m).set_index("date")["index"]
     rng = pd.date_range("2017-01-01", "2022-06-01", freq="MS")
     s2 = ts.reindex(rng)
@@ -123,14 +129,15 @@ def page_story(D):
     add_gap_band(fig)
     fig.add_hline(y=100, line_dash="dot", line_color=INK, annotation_text="Mốc 2019 = 100", annotation_position="top left")
     ui.style_fig(fig, 340, legend=False)
-    fig.update_yaxes(title="Chỉ số gộp (2019 = 100)")
-    ui.chart_title("Quý I/2020: chỉ số gộp rơi mạnh, rồi khoảng trống dữ liệu kéo dài đến 2022",
-                   "Σ lượt khách ÷ Σ cùng tháng 2019, các thị trường có mốc so sánh")
+    fig.update_yaxes(title="Chỉ số phục hồi gộp (2019 = 100)")
+    ui.chart_title("Quý I/2020: lượng khách giảm sâu từ mức 2019 trước khi dữ liệu bị gián đoạn đến 2022",
+                   "Chỉ số gộp = tổng lượt khách trong tháng ÷ tổng lượt khách cùng tháng năm 2019 (chỉ tính các thị trường có mốc so sánh)")
     ui.show(fig, key="s2")
-    ui.source("Master table M2. Khoảng xám = tháng không có số liệu theo thị trường (không phải số 0).")
+    ui.source("Bảng dữ liệu tổng hợp VNAT/NSO. Vùng xám là giai đoạn không công bố số liệu theo từng thị trường (không phải giá trị 0).")
 
     # ---- Chương 3: mở cửa lại
-    ui.chapter(3, "Mở cửa lại và tăng tốc", "Từ 2022 số liệu quay lại; chỉ số gộp bao giờ chạm mốc 2019?")
+    ui.chapter(3, "Lượng khách mất bao lâu để trở lại mức năm 2019?",
+               "Từ năm 2022, số liệu theo thị trường được công bố trở lại; theo dõi thời điểm chỉ số phục hồi gộp vượt đường chấm mốc 100.")
     s3 = ts.loc["2022-01-01":]
     cross = s3[s3 >= 100]
     fig = go.Figure(go.Scatter(x=s3.index, y=s3.values, mode="lines+markers", line=dict(color=P["Pea Flower"], width=3),
@@ -140,15 +147,16 @@ def page_story(D):
         fig.add_annotation(x=cross.index[0], y=cross.iloc[0], text=f"Lần đầu ≥ 100: {ui.mlabel(cross.index[0])}",
                            ax=-60, ay=-55, showarrow=True, arrowhead=2, arrowcolor=INK, font=dict(size=12))
     ui.style_fig(fig, 360, legend=False)
-    fig.update_yaxes(title="Chỉ số gộp (2019 = 100)")
-    title3 = (f"Chỉ số gộp lần đầu chạm 2019 vào {ui.mlabel(cross.index[0])} và hiện ở {ui.n0(s3.iloc[-1])}"
-              if len(cross) else "Chỉ số gộp vẫn chưa chạm mốc 2019")
-    ui.chart_title(title3, "Σ lượt khách ÷ Σ cùng tháng 2019 — biến động theo mùa vụ nên đường có răng cưa")
+    fig.update_yaxes(title="Chỉ số phục hồi gộp (2019 = 100)")
+    title3 = (f"Tổng lượng khách lần đầu chạm mốc 2019 vào {ui.mlabel(cross.index[0])} và đạt {ui.n0(s3.iloc[-1])} vào {ui.mlabel(s3.index[-1])}"
+              if len(cross) else "Tổng lượng khách vẫn chưa chạm mốc 2019")
+    ui.chart_title(title3, "Chỉ số phục hồi gộp hàng tháng (2019 = 100); nhịp lên xuống phản ánh biến động mùa vụ trong năm")
     ui.show(fig, key="s3")
-    ui.source("Master table M2.")
+    ui.source("Bảng dữ liệu tổng hợp VNAT/NSO.")
 
     # ---- Chương 4: không đồng đều
-    ui.chapter(4, "Không đồng đều: ai kéo, ai chững", f"Chênh lệch lượt khách {ui.mlabel(end)} so với cùng tháng 2019, tính theo số khách thật.")
+    ui.chapter(4, "Thị trường nào đang đóng góp vào đà phục hồi?",
+               f"Biểu đồ so sánh mức chênh lệch số lượt khách thực tế trong {ui.mlabel(end)} so với cùng tháng năm 2019. Màu xanh = vượt mốc 2019; màu cam = còn thấp hơn 2019.")
     g = has_base.reindex(has_base["gap"].abs().sort_values(ascending=False).index).head(16).sort_values("gap")
     fig = go.Figure(go.Bar(
         x=g["gap"], y=[dl.label(k) for k in g["market"]], orientation="h",
@@ -160,57 +168,64 @@ def page_story(D):
     ui.style_fig(fig, 520, legend=False, margin=dict(l=10, r=80, t=10, b=10))
     fig.add_vline(x=0, line_color=INK, line_width=1)
     fig.update_yaxes(showgrid=False)
-    fig.update_xaxes(showgrid=True, gridcolor=GRID, title="Lượt khách chênh so với cùng tháng 2019")
+    fig.update_xaxes(showgrid=True, gridcolor=GRID, title="Chênh lệch lượt khách so với cùng tháng 2019")
     top_pos = g.sort_values("gap", ascending=False).iloc[0]
     top_neg = g.sort_values("gap").iloc[0]
-    ui.chart_title(f"{top_pos['market']} tăng thêm nhiều nhất, trong khi {top_neg['market']} đang thiếu hụt lớn nhất",
-                   f"16 thị trường chênh lệch lớn nhất, {ui.mlabel(end)} so với {ui.mlabel(end).replace(str(end.year), '2019')}. "
-                   "Cam = chưa phục hồi · Xanh = vượt 2019")
+    ui.chart_title(f"{top_pos['market']} tăng thêm nhiều nhất, trong khi {top_neg['market']} còn thiếu hụt lớn nhất",
+                   f"16 thị trường có chênh lệch lớn nhất ({ui.mlabel(end)} so với {ui.mlabel(end).replace(str(end.year), '2019')}). "
+                   "Cam: chưa phục hồi · Xám: quanh mốc 2019 · Xanh: vượt 2019")
     ui.show(fig, key="s4")
-    ui.source("Master table M2. Chỉ gồm thị trường có mốc 2019.")
+    ui.source("Bảng dữ liệu tổng hợp VNAT/NSO. Chỉ gồm các thị trường có số liệu gốc năm 2019.")
 
-    # ---- Chương 5: hành động
-    ui.chapter(5, "Việc cần làm cho Ban Du lịch", "Ba hướng hành động gợi ý để kiểm chứng — không phải kết luận nhân quả.")
+    # ---- Chương 5: hàm ý
+    ui.chapter(5, "Hàm ý cho việc phát triển thị trường khách quốc tế",
+               "Ba hướng theo dõi gợi ý từ dữ liệu để kiểm chứng thêm — không phải kết luận về quan hệ nhân quả.")
     a, b, c3 = st.columns(3)
     with a:
-        ui.card(f"<h4>🛟 Giữ đà tăng</h4><p>Nhóm tăng thêm nhiều nhất: <b>{names_best}</b>.</p>"
-                "<p>Kiểm tra sức chứa địa phương và đường bay ở mùa cao điểm trước khi tăng ngân sách.</p>", "sea")
+        ui.card(f"<h4>🛟 Duy trì đà tăng ở thị trường đang phát triển</h4><p>Nhóm đóng góp lượng khách tăng thêm lớn nhất: <b>{names_best}</b>.</p>"
+                "<p>Theo dõi sức chứa, đường bay và khả năng phục vụ tại các điểm đến trong mùa cao điểm trước khi mở rộng hoạt động quảng bá.</p>", "sea")
     with b:
-        ui.card(f"<h4>🎯 Kéo thị trường lớn trở lại</h4><p><b>{names_worst}</b> còn dưới mốc 2019.</p>"
-                f"<p>Hai thị trường này đang thiếu tổng cộng <b>{ui.big(worst['gap'].abs().sum())}</b> lượt trong {ui.mlabel(end)} so với cùng tháng 2019 — xem mục <i>Hỏi nhanh</i>.</p>", "sun")
+        ui.card(f"<h4>🎯 Rà soát thị trường chưa phục hồi</h4><p><b>{names_worst}</b> vẫn dưới mốc 2019 "
+                f"(thiếu tổng cộng <b>{ui.big(worst['gap'].abs().sum())}</b> lượt trong {ui.mlabel(end)} so với cùng tháng 2019).</p>"
+                "<p>Xem xét biến động lượng khách gần đây và những rào cản có thể ảnh hưởng đến khả năng quay trở lại tại mục <i>Khám phá dữ liệu → Trả lời câu hỏi thực tế</i>.</p>", "sun")
     with c3:
-        ui.card("<h4>📅 Chọn tháng thử nghiệm</h4><p>Thị trường gần có mùa vụ nhẹ hơn; thị trường xa có mùa vụ rõ hơn.</p>"
-                "<p>Xem trang <i>Phân khúc</i> và <i>Mùa vụ</i> để chọn khung tháng cho chiến dịch nhỏ trước khi mở rộng.</p>")
+        ui.card("<h4>📅 Lựa chọn thời điểm triển khai</h4><p>Mức độ mùa vụ khác nhau giữa nhóm thị trường gần và thị trường xa.</p>"
+                "<p>Đối chiếu mùa cao điểm, mùa thấp điểm và điều kiện thời tiết tại trang <i>Mùa vụ và thời tiết</i> và <i>Nhóm thị trường</i> trước khi thử nghiệm chiến dịch.</p>")
 
-    with st.expander("ℹ️ Nguồn dữ liệu & giới hạn cần biết"):
+    with st.expander("ℹ️ Nguồn dữ liệu và giới hạn cần lưu ý"):
         st.markdown(
-            "- **Nguồn:** VNAT/NSO (lượt khách theo thị trường), Google Trends (3 thị trường), Open-Meteo (Đà Nẵng, Nha Trang), "
-            "gộp bằng key `market` + `date` trong M2.\n"
-            "- **2021:** nguồn không có số liệu theo thị trường → hiển thị là *khoảng trống*, không phải 0.\n"
-            f"- **Chỉ số phục hồi** = lượt khách tháng ÷ cùng tháng 2019 × 100. Chỉ tính khi có cả hai vế. "
-            f"{len(D['excluded'])} thị trường không vào phần Phân khúc vì thiếu dữ liệu.\n"
-            "- **Thị trường nhỏ** có chỉ số rất dao động (vài trăm lượt/tháng) — đọc cùng số khách thật.\n"
-            "- Google Trends chỉ có cho Nhật Bản, Hàn Quốc, Đài Loan và là chỉ số *tương đối* 0–100.")
+            "- **Nguồn dữ liệu:** Lượt khách theo thị trường từ VNAT/NSO; mức quan tâm tìm kiếm từ Google Trends (3 thị trường); "
+            "dữ liệu thời tiết từ Open-Meteo (Đà Nẵng, Nha Trang), ghép theo thị trường và tháng.\n"
+            "- **Khoảng trống 2020–2021:** Nguồn thống kê không có số liệu tách theo từng thị trường nên biểu đồ hiển thị là *khoảng trống*, không phải giá trị 0.\n"
+            f"- **Chỉ số phục hồi** = lượt khách tháng ÷ cùng tháng năm 2019 × 100 (chỉ tính khi có cả hai giá trị). "
+            f"{len(D['excluded'])} thị trường không được đưa vào phần phân nhóm do chưa đủ dữ liệu.\n"
+            "- **Thị trường quy mô nhỏ:** Có thể xuất hiện biến động chỉ số rất lớn (do nền năm 2019 chỉ vài trăm lượt/tháng) — nên đọc kèm số lượt khách thực tế.\n"
+            "- **Google Trends:** Chỉ có cho Nhật Bản, Hàn Quốc, Đài Loan và phản ánh mức độ quan tâm *tương đối* trên thang 0–100.")
 
 
-# ============================================================ TRANG 2 · EXPLORER + HỎI NHANH
+# ============================================================ TRANG 2 · KHÁM PHÁ DỮ LIỆU
 def _presets(D):
     m, f = D["master"], D["feats"]
     end = dl.latest_date(m)
     last12 = m.loc[m["date"] > end - pd.DateOffset(months=12)].groupby("market")["arrivals"].sum().sort_values(ascending=False)
     return {
-        "Top 6 theo lượt khách": last12.index[:6].tolist(),
-        "Đông Bắc Á": ["Hàn Quốc", "Trung Quốc", "Nhật Bản", "Đài Loan"],
-        "Đông Nam Á": ["Thái Lan", "Malaysia", "Singapore", "Indonesia", "Philippines", "Campuchia"],
-        "Phương Tây & Úc": ["Nga", "Hoa Kỳ", "Pháp", "Đức", "Vương quốc Anh", "Úc"],
-        "Tăng nhanh nhất": f.sort_values("growth_pct", ascending=False).index[:6].tolist(),
-        "Tự chọn": ["Hàn Quốc", "Trung Quốc", "Nhật Bản"],
+        "6 thị trường có lượng khách lớn": last12.index[:6].tolist(),
+        "Thị trường Đông Bắc Á": ["Hàn Quốc", "Trung Quốc", "Nhật Bản", "Đài Loan"],
+        "Thị trường Đông Nam Á": ["Thái Lan", "Malaysia", "Singapore", "Indonesia", "Philippines", "Campuchia"],
+        "Thị trường châu Âu, châu Mỹ và Úc": ["Nga", "Hoa Kỳ", "Pháp", "Đức", "Vương quốc Anh", "Úc"],
+        "6 thị trường tăng trưởng cao": f.sort_values("growth_pct", ascending=False).index[:6].tolist(),
+        "Tự chọn thị trường": ["Hàn Quốc", "Trung Quốc", "Nhật Bản"],
     }
 
 
 def page_explorer(D):
-    page_header("🔎", "Explorer", "Tự tay lọc, so sánh và đọc câu trả lời cho các câu hỏi thực tế của Ban Du lịch.")
-    t1, t2 = st.tabs(["📈 Khám phá tự do", "🎯 Hỏi nhanh cho Ban Du lịch"])
+    page_header(
+        "🔎",
+        "Khám phá dữ liệu",
+        "Chọn thị trường, khoảng thời gian và chỉ số để theo dõi biến động lượng khách. Bạn cũng có thể so sánh nhiều thị trường trên cùng một biểu đồ.",
+        "Bắt đầu từ bước 1 đến 4 trong khung lọc ở tab <b>Tự chọn dữ liệu</b>, hoặc chuyển sang tab <b>Trả lời câu hỏi thực tế</b> để xem sẵn 3 phân tích trọng tâm.",
+    )
+    t1, t2 = st.tabs(["📈 Tự chọn dữ liệu", "🎯 Trả lời câu hỏi thực tế"])
     with t1:
         _explorer_free(D)
     with t2:
@@ -225,26 +240,41 @@ def _explorer_free(D):
 
     with st.container(border=True):
         c1, c2 = st.columns([1.1, 1.5])
-        preset = c1.radio("① Nhóm thị trường", list(presets), horizontal=False, key="ex_preset")
+        preset = c1.radio("1. Chọn nhóm thị trường", list(presets), horizontal=False, key="ex_preset")
         default = [x for x in presets[preset] if x in D["colors"]]
-        sel = c2.multiselect("② Thị trường (thêm/bớt tuỳ ý)", sorted(m["market"].unique()), default=default,
-                             key=f"ex_mk_{preset}", help="Mỗi thị trường luôn đúng một màu trong mọi biểu đồ.")
+        sel = c2.multiselect("2. Chọn thị trường cần xem", sorted(m["market"].unique()), default=default,
+                             key=f"ex_mk_{preset}", help="Có thể thêm hoặc bớt thị trường tùy ý. Mỗi thị trường giữ nguyên một màu cố định trên toàn ứng dụng.")
         c3, c4 = st.columns([1.1, 1.5])
-        metric = c3.radio("③ Chỉ số hiển thị", ["Chỉ số phục hồi (2019 = 100)", "Lượt khách mỗi tháng", "Tỷ trọng trong tổng"],
+        metric = c3.radio("3. Bạn muốn so sánh theo", ["Chỉ số phục hồi (2019 = 100)", "Lượt khách mỗi tháng", "Tỷ trọng trong tổng (%)"],
                           key="ex_metric")
         d0 = pd.Timestamp("2017-01-01")
         start_default = d0 if d0 in all_dates else all_dates[0]
 
         rng = c4.select_slider(
-            "④ Khoảng thời gian",
+            "4. Thời gian phân tích",
             options=all_dates,
             value=(start_default, all_dates[-1]),
             format_func=ui.mlabel,
             key="ex_range"
         )
         c5, c6, _ = st.columns([1.1, 1.1, 1.4])
-        smooth = c5.toggle("⑤ Làm mượt 3 tháng", value=False, help="Trung bình trượt 3 tháng để giảm răng cưa mùa vụ.")
-        show_base = c6.toggle("⑥ Hiện mốc 2019 = 100", value=True)
+        smooth = c5.toggle("Làm mượt đường biểu diễn", value=False, help="Tính trung bình trượt 3 tháng để giảm dao động ngắn hạn theo mùa vụ.")
+        show_base = c6.toggle("Hiện đường mốc năm 2019", value=True, help="Hiển thị đường tham chiếu tại mức 100 khi đang xem Chỉ số phục hồi.")
+
+    ui.guide_box(
+        "Cách đọc 3 chỉ số và thang phục hồi",
+        "<ul style='margin:.2rem 0 .45rem 1.1rem;padding:0'>"
+        "<li><b>Chỉ số phục hồi:</b> So sánh lượng khách với cùng tháng năm 2019. Mốc 100 tương đương năm 2019.</li>"
+        "<li><b>Lượt khách mỗi tháng:</b> Cho biết số khách thực tế đến từ từng thị trường.</li>"
+        "<li><b>Tỷ trọng trong tổng:</b> Cho biết mỗi thị trường đóng góp bao nhiêu phần trăm tổng lượt khách quốc tế.</li>"
+        "</ul>"
+        "<div style='font-size:.82rem;color:#5C605B'>Ví dụ minh họa cách đọc Chỉ số phục hồi (không phải số liệu thực tế):</div>"
+        "<div class='scale-grid'>"
+        "<div class='scale-item'><div class='num'>80</div><div class='desc'>Thấp hơn cùng tháng 2019: 20%</div></div>"
+        "<div class='scale-item'><div class='num'>100</div><div class='desc'>Bằng mức cùng tháng 2019</div></div>"
+        "<div class='scale-item'><div class='num'>120</div><div class='desc'>Cao hơn cùng tháng 2019: 20%</div></div>"
+        "</div>",
+    )
 
     if not sel:
         st.info("Chọn ít nhất một thị trường để bắt đầu.")
@@ -274,7 +304,7 @@ def _explorer_free(D):
             fig.add_trace(go.Scatter(x=[last.index[-1]], y=[last.iloc[-1]], mode="text", text=[f"  {mk}"], textposition="middle right",
                                      textfont=dict(size=12, color=INK), showlegend=False, hoverinfo="skip"))
     if metric.startswith("Chỉ số") and show_base:
-        fig.add_hline(y=100, line_dash="dot", line_color=INK, annotation_text="Mốc 2019", annotation_position="top left")
+        fig.add_hline(y=100, line_dash="dot", line_color=INK, annotation_text="Mốc 2019 = 100", annotation_position="top left")
     if pd.Timestamp(rng[0]) <= pd.Timestamp("2021-12-01") and pd.Timestamp(rng[1]) >= pd.Timestamp("2020-04-01"):
         add_gap_band(fig, start=str(max(pd.Timestamp(rng[0]), pd.Timestamp("2020-04-01")).date()),
                      end=str(min(pd.Timestamp(rng[1]), pd.Timestamp("2021-12-31")).date()))
@@ -282,8 +312,10 @@ def _explorer_free(D):
     fig.update_layout(hovermode="x unified")
     fig.update_yaxes(title=ytitle)
     fig.update_xaxes(range=[rng[0], pd.Timestamp(rng[1]) + pd.DateOffset(months=4)])
-    ui.chart_title(f"{ytitle}: {', '.join(sel[:3])}{'…' if len(sel) > 3 else ''}", f"{ui.mlabel(rng[0])} – {ui.mlabel(rng[1])}"
-                   + (" · làm mượt 3 tháng" if smooth else ""))
+    ui.chart_title(f"{ytitle}: {', '.join(sel[:3])}{'…' if len(sel) > 3 else ''}",
+                   f"Giai đoạn {ui.mlabel(rng[0])} – {ui.mlabel(rng[1])}"
+                   + (" · đang bật làm mượt trung bình trượt 3 tháng" if smooth else "")
+                   + " · mỗi đường tương ứng một thị trường đã chọn")
     ui.show(fig, key="ex_main")
 
     # thẻ số liệu tháng mới nhất
@@ -295,27 +327,59 @@ def _explorer_free(D):
         ri = row["recovery_index"].iloc[0] if len(row) else np.nan
         yoy = 100 * (a / prev.iloc[0] - 1) if len(prev) and pd.notna(a) and prev.iloc[0] else np.nan
         ui.kpi(col, dl.label(mk), ui.n0(ri) if pd.notna(ri) else "–",
-               f"{ui.mlabel(end)} · {ui.big(a)} lượt<br>YoY {ui.pct(yoy)}")
+               f"{ui.mlabel(end)} · {ui.big(a)} lượt<br>Cùng kỳ năm trước: {ui.pct(yoy)}")
 
     # xếp hạng tháng
     st.write("")
     avail = [d_ for d_ in all_dates if m.loc[m["date"] == d_, "recovery_index"].notna().sum() >= 10]
-    rk_date = st.select_slider("Xếp hạng theo tháng", options=avail, value=avail[-1], format_func=ui.mlabel, key="ex_rank")
-    s = dl.market_snapshot(m, rk_date).dropna(subset=["recovery_index"]).sort_values("recovery_index", ascending=False).head(15).iloc[::-1]
-    fig = go.Figure(go.Bar(
-        x=s["recovery_index"], y=[dl.label(k) for k in s["market"]], orientation="h",
-        marker_color=[ui.STATUS_COLOR[x] for x in s["status"]], text=[ui.n0(v) for v in s["recovery_index"]], textposition="outside",
-        cliponaxis=False, customdata=np.stack([s["arrivals"]], 1),
-        hovertemplate="<b>%{y}</b><br>Chỉ số: %{x:.0f}<br>Lượt khách: %{customdata[0]:,.0f}<extra></extra>"))
-    fig.add_vline(x=100, line_dash="dot", line_color=INK)
-    ui.style_fig(fig, 440, legend=False, margin=dict(l=10, r=50, t=10, b=10))
+    rc1, rc2 = st.columns([1.4, 1])
+    rk_date = rc1.select_slider("Tháng xếp hạng (độc lập với biểu đồ trên)", options=avail, value=avail[-1], format_func=ui.mlabel, key="ex_rank")
+    rk_metric = rc2.radio("Chỉ số xếp hạng", ["Chỉ số phục hồi (2019 = 100)", "Lượt khách mỗi tháng", "Tỷ trọng trong tổng (%)"],
+                          horizontal=False, key="ex_rank_metric")
+
+    snap_rk = dl.market_snapshot(m, rk_date)
+    if rk_metric.startswith("Chỉ số"):
+        s = snap_rk.dropna(subset=["recovery_index"]).sort_values("recovery_index", ascending=False).head(15).iloc[::-1]
+        fig = go.Figure(go.Bar(
+            x=s["recovery_index"], y=[dl.label(k) for k in s["market"]], orientation="h",
+            marker_color=[ui.STATUS_COLOR[x] for x in s["status"]], text=[ui.n0(v) for v in s["recovery_index"]], textposition="outside",
+            cliponaxis=False, customdata=np.stack([s["arrivals"]], 1),
+            hovertemplate="<b>%{y}</b><br>Chỉ số phục hồi: %{x:.0f}<br>Lượt khách: %{customdata[0]:,.0f}<extra></extra>"))
+        fig.add_vline(x=100, line_dash="dot", line_color=INK, annotation_text="Mốc 2019 = 100", annotation_position="top right")
+        rank_title = "Xếp hạng mức phục hồi giữa các thị trường"
+        rank_sub = (f"So sánh chỉ số phục hồi của 15 thị trường dẫn đầu trong {ui.mlabel(rk_date)}. "
+                    "Chỉ số cao hơn 100 cho thấy lượng khách đã vượt cùng tháng năm 2019 (Cam: dưới 95 · Xám: 95–105 · Xanh: trên 105). "
+                    "Lưu ý: bảng xếp hạng này dùng bộ lọc tháng và chỉ số riêng, độc lập với biểu đồ xu hướng phía trên.")
+    elif rk_metric.startswith("Lượt"):
+        s = snap_rk.sort_values("arrivals", ascending=False).head(15).iloc[::-1]
+        fig = go.Figure(go.Bar(
+            x=s["arrivals"], y=[dl.label(k) for k in s["market"]], orientation="h",
+            marker_color=[colors[k] for k in s["market"]], text=[ui.big(v) for v in s["arrivals"]], textposition="outside",
+            cliponaxis=False, customdata=np.stack([s["recovery_index"].fillna(-1)], 1),
+            hovertemplate="<b>%{y}</b><br>Lượt khách: %{x:,.0f}<br>Chỉ số phục hồi: %{customdata[0]:.0f}<extra></extra>"))
+        rank_title = "Xếp hạng lượt khách giữa các thị trường"
+        rank_sub = (f"15 thị trường có số lượt khách thực tế cao nhất trong {ui.mlabel(rk_date)}. "
+                    "Bộ lọc xếp hạng bên dưới hoạt động độc lập với biểu đồ xu hướng phía trên.")
+    else:
+        tot_rk = snap_rk["arrivals"].sum()
+        snap_rk["share"] = 100 * snap_rk["arrivals"] / tot_rk if tot_rk else np.nan
+        s = snap_rk.sort_values("share", ascending=False).head(15).iloc[::-1]
+        fig = go.Figure(go.Bar(
+            x=s["share"], y=[dl.label(k) for k in s["market"]], orientation="h",
+            marker_color=[colors[k] for k in s["market"]], text=[ui.pct(v, signed=False) for v in s["share"]], textposition="outside",
+            cliponaxis=False, customdata=np.stack([s["arrivals"]], 1),
+            hovertemplate="<b>%{y}</b><br>Tỷ trọng: %{x:.1f}%<br>Lượt khách: %{customdata[0]:,.0f}<extra></extra>"))
+        rank_title = "Xếp hạng tỷ trọng đóng góp giữa các thị trường"
+        rank_sub = (f"15 thị trường đóng góp tỷ trọng lớn nhất trong tổng lượt khách {ui.mlabel(rk_date)}. "
+                    "Bộ lọc xếp hạng bên dưới hoạt động độc lập với biểu đồ xu hướng phía trên.")
+
+    ui.style_fig(fig, 440, legend=False, margin=dict(l=10, r=70, t=10, b=10))
     fig.update_yaxes(showgrid=False)
     fig.update_xaxes(showgrid=False, visible=False)
-    ui.chart_title(f"15 thị trường có chỉ số phục hồi cao nhất, {ui.mlabel(rk_date)}",
-                   "Cam = dưới 95 · Xám = quanh 100 · Xanh = trên 105. Thị trường nhỏ có thể cho chỉ số rất cao — xem lượt khách khi di chuột.")
+    ui.chart_title(rank_title, rank_sub)
     ui.show(fig, key="ex_rank_chart")
 
-    with st.expander("📄 Xem & tải bảng dữ liệu đang lọc"):
+    with st.expander("📄 Xem và tải bảng dữ liệu đang lọc"):
         out = d[["market", "date", "arrivals", "baseline_2019", "recovery_index"]].sort_values(["market", "date"])
         ui.table(out)
         st.download_button("⬇️ Tải CSV", out.to_csv(index=False).encode("utf-8-sig"), "du_lieu_loc.csv", "text/csv")
@@ -324,7 +388,7 @@ def _explorer_free(D):
 def _explorer_qa(D):
     m, colors = D["master"], D["colors"]
     end = dl.latest_date(m)
-    q = st.radio("Chọn câu hỏi", [
+    q = st.radio("Chọn câu hỏi cần phân tích", [
         "1️⃣ Nên ưu tiên kéo khách trở lại từ thị trường nào?",
         "2️⃣ Chạy chiến dịch vào tháng nào cho một thị trường?",
         "3️⃣ Tìm kiếm trực tuyến có báo trước lượt khách không?"], key="qa_q")
@@ -341,16 +405,16 @@ def _explorer_qa(D):
         fig.update_yaxes(showgrid=False)
         fig.update_xaxes(visible=False)
         top = short.iloc[-1]
-        ui.chart_title(f"{top['market']} đang thiếu {ui.big(top['short'])} lượt mỗi tháng so với 2019 — lớn nhất trong các thị trường chưa phục hồi",
-                       f"Số khách còn thiếu = cùng tháng 2019 − {ui.mlabel(end)}")
+        ui.chart_title(f"{top['market']} còn thiếu {ui.big(top['short'])} lượt trong {ui.mlabel(end)} so với cùng tháng 2019",
+                       f"Khoảng cách thiếu hụt = lượt khách cùng tháng 2019 − lượt khách {ui.mlabel(end)} (8 thị trường thiếu nhiều nhất)")
         ui.show(fig, key="qa1")
         recent = m.loc[(m["market"] == top["market"]) & (m["date"] > end - pd.DateOffset(months=6)), ["date", "recovery_index"]].dropna()
         trail = " → ".join(f"{ui.mlabel(r.date)}: {ui.n0(r.recovery_index)}" for r in recent.itertuples())
-        ui.card(f"<h4>Đọc nhanh</h4><p>Chỉ số 6 tháng gần nhất của <b>{top['market']}</b>: {trail}.</p>"
-                "<p>Nếu đường đang đi xuống, nên kiểm tra rào cản đi lại trước khi tăng ngân sách quảng bá. Đây là gợi ý để kiểm chứng, không phải kết luận nhân quả.</p>", "sun")
+        ui.card(f"<h4>Gợi ý từ dữ liệu</h4><p>Chỉ số phục hồi 6 tháng gần nhất của <b>{top['market']}</b>: {trail}.</p>"
+                "<p>Nếu chỉ số tiếp tục duy trì dưới mốc 100 hoặc có xu hướng đi xuống, cần rà soát các rào cản về đường bay, thị thực hoặc nhu cầu thị trường trước khi mở rộng ngân sách quảng bá. Đây là gợi ý để kiểm chứng, không phải kết luận nhân quả.</p>", "sun")
     elif q.startswith("2"):
         S = D["season"]
-        mk = st.selectbox("Thị trường", S.index.tolist(), index=S.index.tolist().index("Nhật Bản") if "Nhật Bản" in S.index else 0)
+        mk = st.selectbox("Chọn thị trường", S.index.tolist(), index=S.index.tolist().index("Nhật Bản") if "Nhật Bản" in S.index else 0)
         s = S.loc[mk]
         top3 = s.sort_values(ascending=False).head(3).index.tolist()
         low = s.idxmin()
@@ -359,47 +423,52 @@ def _explorer_qa(D):
                                hovertemplate="%{x}: <b>%{y:.0f}</b><extra></extra>"))
         fig.add_hline(y=100, line_dash="dot", line_color=INK, annotation_text="Trung bình năm = 100", annotation_position="top left")
         ui.style_fig(fig, 380, legend=False)
-        fig.update_yaxes(title="Chỉ số mùa vụ (T1–T11 trung bình = 100)")
-        ui.chart_title(f"{mk}: đông nhất vào {', '.join(top3)}, thưa nhất vào {low}",
-                       "Trung vị 2023–2025 của lượt khách mỗi tháng ÷ bình quân tháng 1–11 của chính năm đó")
+        fig.update_yaxes(title="Chỉ số mùa vụ (trung bình T1–T11 = 100)")
+        ui.chart_title(f"{mk}: lượng khách tập trung cao nhất vào {', '.join(top3)} và thấp nhất vào {low}",
+                       "Chỉ số mùa vụ = trung vị giai đoạn 2023–2025 của lượt khách từng tháng ÷ bình quân tháng 1–11 cùng năm. Xanh: 3 tháng cao nhất · Cam: tháng thấp nhất.")
         ui.show(fig, key="qa2")
-        ui.source("Master table M2, cách tính như M6. Chỉ gồm thị trường đủ số liệu 2023–2025.")
-        ui.card(f"<h4>Đọc nhanh</h4><p>Muốn <b>tăng khách</b> ở {mk}: thử chiến dịch ngay trước {top3[0]}. Muốn <b>lấp mùa thấp</b>: thử gói ưu đãi quanh {low}. "
-                "Gợi ý để chạy thử nhỏ rồi đo phản hồi.</p>", "sea")
+        ui.source("Bảng dữ liệu tổng hợp (chỉ tính các thị trường có đủ số liệu giai đoạn 2023–2025).")
+        ui.card(f"<h4>Gợi ý từ dữ liệu</h4><p>Thị trường <b>{mk}</b> có lượng khách tập trung nhiều hơn vào các tháng cao điểm ({', '.join(top3)}) và thấp hơn vào {low}. "
+                f"Nếu muốn thử nghiệm chiến dịch kích cầu, có thể cân nhắc giai đoạn ngay trước mùa cao điểm ({top3[0]}) hoặc những tháng có lượng khách thấp hơn ({low}) để đánh giá mức độ phản hồi.</p>", "sea")
     else:
         T = D["trends"]
         c1, c2 = st.columns(2)
-        mk = c1.selectbox("Thị trường", sorted(T["market"].unique()))
-        lag = c2.slider("Tìm kiếm đi trước (tháng)", 0, 3, 2)
+        mk = c1.selectbox("Chọn thị trường", sorted(T["market"].unique()))
+        lag = c2.slider("Độ trễ tìm kiếm đi trước (tháng)", 0, 3, 2)
         g = dl.lagged_trends(T, mk, lag)
         pr, sr = dl.simple_corr(g["interest_lag"], g["arrivals"])
         coef = np.polyfit(g["interest_lag"], g["arrivals"], 1)
         xs = np.linspace(g["interest_lag"].min(), g["interest_lag"].max(), 20)
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=g["interest_lag"], y=g["arrivals"], mode="markers", marker=dict(size=9, color=colors[mk], line=dict(color=INK, width=.6)),
-                                 customdata=g["date"].dt.strftime("%m/%Y"), hovertemplate="Tháng %{customdata}<br>Quan tâm: %{x}<br>Lượt khách: %{y:,.0f}<extra></extra>"))
+                                 customdata=g["date"].dt.strftime("%m/%Y"), hovertemplate="Tháng %{customdata}<br>Mức quan tâm: %{x}<br>Lượt khách: %{y:,.0f}<extra></extra>"))
         fig.add_trace(go.Scatter(x=xs, y=np.polyval(coef, xs), mode="lines", line=dict(color=INK, dash="dash", width=1.5), hoverinfo="skip"))
         ui.style_fig(fig, 400, legend=False)
-        fig.update_xaxes(title=f"Mức quan tâm tìm kiếm {lag} tháng trước (0–100, tương đối)", showgrid=True, gridcolor=GRID)
-        fig.update_yaxes(title="Lượt khách")
-        ui.chart_title(f"{mk}: quan tâm tìm kiếm {lag} tháng trước đi cùng lượt khách (Pearson r = {hs._vn(f"{pr:.2f}")})",
-                       f"Spearman ρ = {hs._vn(f'{sr:.2f}')} · n = {len(g)} tháng có đủ hai vế")
+        fig.update_xaxes(title=f"Mức quan tâm tìm kiếm {lag} tháng trước (thang 0–100, tương đối)", showgrid=True, gridcolor=GRID)
+        fig.update_yaxes(title="Lượt khách thực tế")
+        ui.chart_title(f"{mk}: mức độ quan tâm tìm kiếm {lag} tháng trước có tương quan thuận với lượt khách (r = {hs._vn(f'{pr:.2f}')})",
+                       f"Tương quan hạng Spearman ρ = {hs._vn(f'{sr:.2f}')} · {len(g)} tháng có đủ dữ liệu tìm kiếm và lượt khách")
         ui.show(fig, key="qa3")
         yoy = D["yoy"]
         yrow = yoy.loc[(yoy["market"] == mk) & (yoy["trend_period"] == f"interest_lead_{lag}m_yoy" if lag else yoy["trend_period"] == "interest_yoy")]
-        extra = f" Khi so cùng kỳ năm trước, Spearman ρ = {hs._vn(f"{yrow['spearman_r'].iloc[0]:.2f}")}." if len(yrow) else ""
-        ui.card("<h4>⚠️ Đọc thận trọng</h4><p>Tương quan gộp chung giai đoạn sụp đổ rồi hồi phục nên bị kéo cao bởi xu hướng chung "
-                f"của cả hai chuỗi.{extra} Đây là <b>dấu hiệu sớm</b> để theo dõi, không chứng minh tìm kiếm gây ra lượt khách.</p>")
+        extra = f" Khi đối chiếu theo biến động cùng kỳ năm trước (YoY), hệ số Spearman ρ đạt {hs._vn(f'{yrow["spearman_r"].iloc[0]:.2f}')}." if len(yrow) else ""
+        ui.card("<h4>Gợi ý từ dữ liệu · Lưu ý khi đọc tương quan</h4><p>Hệ số tương quan trong toàn giai đoạn bị nâng cao do cả mức tìm kiếm và lượt khách đều cùng giảm mạnh rồi phục hồi sau đại dịch."
+                f"{extra} Kết quả này nên được dùng như <b>tín hiệu tham khảo sớm</b> để theo dõi xu hướng nhu cầu, không chứng minh lượt tìm kiếm trực tiếp tạo ra lượng khách.</p>")
 
 
-# ============================================================ TRANG 3 · ĐUA PHỤC HỒI
+# ============================================================ TRANG 3 · DIỄN BIẾN PHỤC HỒI
 def page_race(D):
     m = D["master"]
-    page_header("🏁", "Cuộc đua phục hồi", "Mỗi thanh là chỉ số phục hồi của một thị trường (2019 = 100). Bấm ▶ và xem ai về đích trước.")
+    page_header(
+        "📈",
+        "Diễn biến phục hồi",
+        "Theo dõi sự thay đổi chỉ số phục hồi theo thời gian và xác định thời điểm từng thị trường trở lại mức năm 2019.",
+        "Chọn số lượng thị trường và mốc bắt đầu, sau đó bấm <b>▶ Chạy</b> hoặc kéo thanh trượt tháng để quan sát thứ tự thay đổi.",
+    )
     c1, c2, c3 = st.columns(3)
-    topn = c1.slider("Số thị trường (theo quy mô 2019)", 6, 20, 12)
-    start = c2.selectbox("Bắt đầu từ", ["2022-01", "2023-01", "2024-01"], index=0)
-    speed = c3.select_slider("Tốc độ", ["Chậm", "Vừa", "Nhanh"], value="Vừa")
+    topn = c1.slider("Số thị trường muốn theo dõi", 6, 20, 12, help="Chọn nhóm thị trường có quy mô lượt khách năm 2019 lớn nhất.")
+    start = c2.selectbox("Giai đoạn bắt đầu", ["2022-01", "2023-01", "2024-01"], index=0)
+    speed = c3.select_slider("Tốc độ phát lại", ["Chậm", "Vừa", "Nhanh"], value="Vừa")
     dur = {"Chậm": 900, "Vừa": 500, "Nhanh": 250}[speed]
 
     size = m.groupby("market")["baseline_2019"].mean().sort_values(ascending=False)
@@ -407,7 +476,7 @@ def page_race(D):
     piv = m.loc[m["market"].isin(mk)].pivot(index="date", columns="market", values="recovery_index").loc[start:]
     piv = piv.loc[piv.notna().sum(axis=1) >= max(4, int(0.6 * topn))]
     if piv.empty:
-        st.warning("Không đủ dữ liệu để dựng cuộc đua với lựa chọn này.")
+        st.warning("Không đủ dữ liệu để hiển thị diễn biến phục hồi với lựa chọn này.")
         return
     xmax = float(np.ceil(piv.max().max() * 1.15 / 50) * 50)
 
@@ -436,12 +505,12 @@ def page_race(D):
         sliders=[dict(active=0, x=0.18, y=-0.1, len=0.8, currentvalue=dict(prefix="Tháng: ", font=dict(size=13)), pad=dict(t=0, b=10),
                       steps=[dict(label=ui.mlabel(d), method="animate", args=[[d.strftime("%Y-%m")], dict(mode="immediate", frame=dict(duration=0, redraw=True), transition=dict(duration=0))]) for d in dates])])
     fig.add_shape(type="line", x0=100, x1=100, y0=0, y1=1, yref="paper", line=dict(color=INK, dash="dot", width=1.5))
-    ui.chart_title("Cuộc đua về mốc 2019: ai về đích trước, ai còn chạy phía sau",
-                   "Cam = dưới 95 · Xám = quanh 100 · Xanh = trên 105. Đường chấm = mốc 2019.")
+    ui.chart_title("Diễn biến chỉ số phục hồi theo từng tháng",
+                   "Cam: dưới 95 · Xám: quanh mốc 2019 (95–105) · Xanh: trên 105. Đường chấm dọc đánh dấu mốc năm 2019 = 100.")
     ui.show(fig, key="race")
-    ui.source("Master table M2. 2020–2021 không có số liệu theo thị trường nên cuộc đua bắt đầu từ 2022.")
+    ui.source("Bảng dữ liệu tổng hợp VNAT/NSO. Số liệu theo từng thị trường được công bố trở lại từ năm 2022.")
 
-    # Ai về đích trước
+    # Thời điểm lần đầu đạt mốc 2019
     first = {}
     for k in piv.columns:
         s = piv[k].dropna()
@@ -455,19 +524,26 @@ def page_race(D):
     ui.style_fig(fig2, 60 + 28 * max(len(crossed), 3), legend=False, margin=dict(l=10, r=20, t=10, b=30))
     fig2.update_yaxes(autorange="reversed", showgrid=True, gridcolor=GRID)
     fig2.update_xaxes(showgrid=False)
-    ui.chart_title("Ai về đích trước?", f"Tháng đầu tiên chỉ số ≥ 100 kể từ {ui.mlabel(piv.index[0])}"
-                   + (f" · Chưa về đích: {', '.join(never)}" if never else ""))
+    ui.chart_title("Thời điểm từng thị trường lần đầu đạt mốc 2019",
+                   f"Tháng đầu tiên ghi nhận chỉ số phục hồi ≥ 100 kể từ {ui.mlabel(piv.index[0])}"
+                   + (f" · Chưa đạt mốc 100: {', '.join(never)}" if never else ""))
     ui.show(fig2, key="race2")
+    st.caption("Lưu ý: Việc lần đầu chạm mốc 100 không đồng nghĩa thị trường đã duy trì ổn định mức phục hồi đó trong các tháng tiếp theo.")
 
 
-# ============================================================ TRANG 4 · MÙA VỤ & THỜI TIẾT
+# ============================================================ TRANG 4 · MÙA VỤ VÀ THỜI TIẾT
 def page_season(D):
     m, w = D["master"], D["weather"]
-    page_header("🌦️", "Mùa vụ & thời tiết", "Khi nào khách đến nhiều, và mưa nắng ở hai điểm đến biển ảnh hưởng thế nào đến việc chọn tháng.")
-    t1, t2 = st.tabs(["🔥 Bản đồ nhiệt thị trường × tháng", "☔ Mưa nắng Đà Nẵng · Nha Trang"])
+    page_header(
+        "🌦️",
+        "Mùa vụ và điều kiện thời tiết",
+        "Khám phá những tháng có lượng khách cao điểm và đặc điểm mưa, nắng tại Đà Nẵng và Nha Trang.",
+        "Xem biến động phục hồi theo từng tháng ở tab đầu tiên, sau đó đối chiếu đặc điểm mưa nắng tại hai điểm đến biển ở tab thứ hai.",
+    )
+    t1, t2 = st.tabs(["📅 Mùa khách theo tháng", "☀️ Thời tiết tại Đà Nẵng và Nha Trang"])
     with t1:
         years = sorted(m.loc[m["recovery_index"].notna(), "year"].unique(), reverse=True)
-        y = st.select_slider("Năm", options=sorted(years), value=2025 if 2025 in years else years[0])
+        y = st.select_slider("Chọn năm phân tích", options=sorted(years), value=2025 if 2025 in years else years[0])
         d = m.loc[(m["year"] == y) & m["recovery_index"].notna()]
         piv = d.pivot(index="market", columns="month", values="recovery_index").reindex(columns=range(1, 13))
         piv = piv.loc[piv.notna().sum(axis=1) >= 6]
@@ -477,15 +553,16 @@ def page_season(D):
         fig = go.Figure(go.Heatmap(
             z=z.values, x=dl.MONTH_LABEL, y=[dl.label(k) for k in piv.index], colorscale=DIV_SCALE, zmin=40, zmax=160,
             customdata=piv.values, text=piv.round(0).values, texttemplate="%{text:.0f}", textfont=dict(size=10),
-            hovertemplate="<b>%{y}</b> %{x}/" + str(y) + "<br>Chỉ số: %{customdata:.0f}<extra></extra>", hoverongaps=False,
+            hovertemplate="<b>%{y}</b> %{x}/" + str(y) + "<br>Chỉ số phục hồi: %{customdata:.0f}<extra></extra>", hoverongaps=False,
             colorbar=dict(title="Chỉ số", tickvals=[40, 70, 100, 130, 160], ticktext=["≤40", "70", "100", "130", "≥160"], len=.8)))
         ui.style_fig(fig, 80 + 24 * len(piv), legend=False, margin=dict(l=10, r=10, t=10, b=10))
         fig.update_yaxes(showgrid=False, tickfont=dict(size=11))
         fig.update_xaxes(side="top")
-        ui.chart_title(f"{y}: mỗi ô là chỉ số của một thị trường trong một tháng so với cùng tháng 2019",
-                       "Cam = chưa phục hồi · Xám = bằng 2019 · Xanh = vượt 2019. Hàng sắp xếp theo tổng lượt khách trong năm; ô trắng = thiếu số liệu.")
+        ui.chart_title(f"Lượng khách thay đổi như thế nào giữa các tháng? (Năm {y})",
+                       "Mỗi ô thể hiện chỉ số phục hồi của một thị trường trong một tháng, so với cùng tháng năm 2019 (= 100). "
+                       "Cam: dưới mốc 2019 · Xám: quanh 100 · Xanh: vượt 2019 · Ô trắng: thiếu số liệu.")
         ui.show(fig, key="se_heat")
-        ui.source("Master table M2. Màu cắt ở 40–160 để ngoại lệ không lấn át; số trong ô là giá trị thật.")
+        ui.source("Bảng dữ liệu tổng hợp VNAT/NSO. Các hàng sắp xếp theo tổng lượt khách trong năm; thang màu giới hạn ở 40–160 để tránh ngoại lệ làm mờ xu hướng chung (số trong ô là giá trị thực tế).")
     with t2:
         wd = w.loc[w["year"].between(2017, 2025)]
         rain = wd.groupby(["destination", "month"])["precipitation_sum"].median().unstack(0)
@@ -499,8 +576,8 @@ def page_season(D):
         ui.style_fig(fig, 360)
         fig.update_yaxes(title="Lượng mưa trung vị (mm/tháng)")
         wet = {c: ", ".join(f"T{k}" for k in rain[c].sort_values(ascending=False).head(3).index.sort_values()) for c in rain.columns}
-        ui.chart_title(f"Mưa nhiều nhất: Đà Nẵng vào {wet.get('Đà Nẵng', '–')}; Nha Trang vào {wet.get('Nha Trang', '–')}",
-                       "Trung vị lượng mưa từng tháng, 2017–2025")
+        ui.chart_title("Tháng nào thường có lượng mưa cao tại hai điểm đến?",
+                       f"Trung vị lượng mưa từng tháng giai đoạn 2017–2025 · Cao điểm mưa: Đà Nẵng ({wet.get('Đà Nẵng', '–')}), Nha Trang ({wet.get('Nha Trang', '–')})")
         ui.show(fig, key="se_rain")
         fig = go.Figure()
         for dest in sun.columns:
@@ -508,24 +585,29 @@ def page_season(D):
                                      line=dict(color=dcol[dest], width=3),
                                      hovertemplate=f"<b>{dest}</b> %{{x}}: %{{y:.0f}} giờ<extra></extra>"))
         ui.style_fig(fig, 300)
-        fig.update_yaxes(title="Số giờ nắng trung vị")
-        ui.chart_title("Số giờ nắng theo tháng", "Trung vị 2017–2025")
+        fig.update_yaxes(title="Số giờ nắng trung vị (giờ/tháng)")
+        ui.chart_title("Số giờ nắng trung bình theo tháng", "Trung vị số giờ nắng mỗi tháng tại Đà Nẵng và Nha Trang, giai đoạn 2017–2025")
         ui.show(fig, key="se_sun")
-        ui.source("Open-Meteo Historical Weather qua M2.")
-        ui.card("<p>⚠️ Số khách trong master là <b>toàn quốc</b>, còn thời tiết chỉ đo ở Đà Nẵng và Nha Trang — "
-                "dữ liệu này giúp chọn <i>tháng đẹp trời để quảng bá điểm đến biển</i>, không chứng minh mưa làm giảm khách.</p>")
+        ui.source("Open-Meteo Historical Weather.")
+        ui.card("<p><b>Lưu ý về phạm vi dữ liệu:</b> Lượt khách quốc tế trong bảng dữ liệu là số liệu <b>toàn quốc</b>, trong khi dữ liệu thời tiết chỉ đo tại Đà Nẵng và Nha Trang. "
+                "Các biểu đồ trên giúp tham khảo điều kiện mưa nắng tại hai điểm đến biển để chọn thời điểm quảng bá phù hợp, không chứng minh thời tiết tác động trực tiếp đến tổng lượng khách quốc tế.</p>")
 
 
-# ============================================================ TRANG 5 · PHÂN KHÚC
+# ============================================================ TRANG 5 · NHÓM THỊ TRƯỜNG
 def page_segments(D):
     seg, prof, evr, sil = D["seg"], D["prof"], D["evr"], D["sil"]
-    page_header("🧭", "Phân khúc thị trường", f"{len(seg)} thị trường đủ dữ liệu được chia theo tốc độ phục hồi, mùa vụ, khoảng cách và tăng trưởng (K-means, k = 2).")
+    page_header(
+        "🧭",
+        "Các nhóm thị trường khách quốc tế",
+        f"Phân loại {len(seg)} thị trường có đủ dữ liệu dựa trên tốc độ phục hồi, đặc điểm mùa vụ, khoảng cách địa lý và tăng trưởng. Kết quả giúp nhận diện những nhóm thị trường có đặc điểm tương đồng.",
+        "Trục ngang thể hiện khoảng cách địa lý đến Việt Nam, trục dọc thể hiện biên độ dao động mùa vụ. Di chuột vào từng điểm để xem đầy đủ các chỉ số của thị trường.",
+    )
     c1, c2 = st.columns([1.5, 1])
     with c1:
         fig = go.Figure()
         for k, g in seg.groupby("cluster"):
             fig.add_trace(go.Scatter(
-                x=g["distance_km"], y=g["seasonal_amplitude"], mode="markers+text", name=CLUSTER_NAME.get(k, f"Cụm {k}"),
+                x=g["distance_km"], y=g["seasonal_amplitude"], mode="markers+text", name=CLUSTER_NAME.get(k, f"Nhóm {k}"),
                 text=[x for x in g.index], textposition="top center", textfont=dict(size=10),
                 marker=dict(size=np.sqrt(g["arrivals_latest_ytd"]) / 18 + 8, color=ui.CLUSTER_COLOR[k], opacity=.85, line=dict(color=INK, width=.6)),
                 customdata=np.stack([g["recovery_speed"], g["growth_pct"], g["arrivals_latest_ytd"]], 1),
@@ -534,48 +616,50 @@ def page_segments(D):
         ui.style_fig(fig, 520)
         fig.update_xaxes(title="Khoảng cách địa lý đến Việt Nam (km)", showgrid=True, gridcolor=GRID)
         fig.update_yaxes(title="Biên độ mùa vụ (điểm chỉ số)")
-        ui.chart_title("Thị trường gần có mùa vụ nhẹ; thị trường xa có mùa vụ rõ hơn",
-                       "Kích thước điểm = lượt khách lũy kế năm nay · màu = cụm K-means")
+        ui.chart_title("Khoảng cách địa lý có liên hệ với mức độ biến động mùa vụ",
+                       "Mỗi điểm đại diện cho một thị trường. Kích thước thể hiện lượng khách lũy kế từ đầu năm, màu sắc thể hiện nhóm phân khúc (K-means, k = 2).")
         ui.show(fig, key="sg_scatter")
-        ui.source("Master table M2, đặc trưng tái lập theo M6.")
+        ui.source("Bảng dữ liệu tổng hợp VNAT/NSO; đặc trưng thị trường tính từ chuỗi phục hồi và mùa vụ.")
     with c2:
         for k, r in prof.iterrows():
             top = ", ".join(r["markets"][:6]) + ("…" if len(r["markets"]) > 6 else "")
-            ui.card(f"<h4><span class='tag' style='background:{ui.CLUSTER_COLOR[k]};color:#fff'>Cụm {k}</span> {CLUSTER_NAME.get(k, '')}</h4>"
+            ui.card(f"<h4><span class='tag' style='background:{ui.CLUSTER_COLOR[k]};color:#fff'>Nhóm {k}</span> {CLUSTER_NAME.get(k, '')}</h4>"
                     f"<p><b>{int(r['n'])} thị trường:</b> {top}</p>"
                     f"<p>Khoảng cách trung vị {ui.n0(r['distance_km'])} km · biên độ mùa vụ {ui.n0(r['seasonal_amplitude'])} · "
-                    f"tăng trưởng trung vị {ui.pct(r['growth_pct'])} · tháng đỉnh phổ biến: T{int(r['peak_month_mode'])}</p>"
-                    f"<p>🧪 <b>Việc cần thử:</b> {CLUSTER_ACTION.get(k, '')}</p>", "sea" if k == 1 else "sun")
+                    f"tăng trưởng trung vị {ui.pct(r['growth_pct'])} · tháng cao điểm phổ biến: T{int(r['peak_month_mode'])}</p>"
+                    f"<p><b>Hướng theo dõi:</b> {CLUSTER_ACTION.get(k, '')}</p>", "sea" if k == 1 else "sun")
             st.write("")
-    ui.card(f"<h4>⚠️ Cụm này KHÔNG có nghĩa là…</h4><p>Hai cụm tách chủ yếu theo <b>khoảng cách</b>, không phải theo tốc độ phục hồi (hai cụm có tốc độ phục hồi trung vị gần nhau). "
-            f"Silhouette = {hs._vn(f'{sil:.2f}')} là mức thấp: ranh giới cụm yếu, dùng như <b>gợi ý nhóm</b> chứ không phải ranh giới cứng. "
-            f"Cụm cũng không cho biết nguyên nhân thị trường phục hồi nhanh hay chậm. {len(D['excluded'])} thị trường thiếu dữ liệu không được đưa vào "
+    ui.card(f"<h4>⚠️ Lưu ý khi đọc kết quả phân nhóm</h4><p>Hai nhóm tách biệt chủ yếu theo <b>khoảng cách địa lý</b> và mức độ mùa vụ, không tách biệt rõ theo tốc độ phục hồi (hai nhóm có tốc độ phục hồi trung vị gần nhau). "
+            f"Chỉ số Silhouette = {hs._vn(f'{sil:.2f}')} (mức thấp) cho thấy ranh giới giữa hai cụm còn yếu — nên xem đây là <b>gợi ý tham khảo</b> chứ không phải phân loại cứng. "
+            f"Kết quả phân nhóm cũng không giải thích nguyên nhân thị trường phục hồi nhanh hay chậm. {len(D['excluded'])} thị trường chưa đủ dữ liệu không nằm trong phân tích này "
             f"({', '.join(D['excluded']['market'])}).</p>")
     with st.expander("📄 Bảng đặc trưng từng thị trường"):
         t = seg.reset_index().rename(columns={"market": "Thị trường", "recovery_speed": "Tốc độ phục hồi", "seasonal_amplitude": "Biên độ mùa vụ",
                                               "peak_month": "Tháng đỉnh", "distance_km": "Khoảng cách (km)", "growth_pct": "Tăng trưởng (%)",
-                                              "arrivals_latest_ytd": "Lượt khách YTD", "cluster": "Cụm"})
-        ui.table(t[["Thị trường", "Cụm", "Tốc độ phục hồi", "Biên độ mùa vụ", "Tháng đỉnh", "Khoảng cách (km)", "Tăng trưởng (%)", "Lượt khách YTD"]].round(2))
+                                              "arrivals_latest_ytd": "Lượt khách YTD", "cluster": "Nhóm"})
+        ui.table(t[["Thị trường", "Nhóm", "Tốc độ phục hồi", "Biên độ mùa vụ", "Tháng đỉnh", "Khoảng cách (km)", "Tăng trưởng (%)", "Lượt khách YTD"]].round(2))
 
 
 # ============================================================ ĐIỀU HƯỚNG
 PAGES = {
-    "Câu chuyện": page_story,
-    "Explorer & Hỏi nhanh": page_explorer,
-    "Đua phục hồi": page_race,
-    "Mùa vụ & thời tiết": page_season,
-    "Phân khúc thị trường": page_segments,
-    "Tương tác đa chiều": m78.page_many_dimensions,
-    "Góc nhìn 3D & 2D": m78.page_beyond_flat,
-    "Kiểm thử & cải tiến": None,
+    "Tổng quan": page_story,
+    "Khám phá dữ liệu": page_explorer,
+    "Diễn biến phục hồi": page_race,
+    "Mùa vụ và thời tiết": page_season,
+    "Nhóm thị trường": page_segments,
+    "Bản đồ thị trường": m78.page_beyond_flat,
+    "So sánh đa chiều": m78.page_many_dimensions,
+    "Đánh giá và cải tiến": None,
 }
 
 with st.sidebar:
-    st.markdown("<div class='brand'>🌴 Coming Back<small>Du lịch quốc tế Việt Nam</small></div>", unsafe_allow_html=True)
+    st.markdown("<div class='brand'>🌴 Coming Back<small>Phân tích du lịch quốc tế Việt Nam</small></div>", unsafe_allow_html=True)
     st.write("")
+    st.caption("Hành trình đọc dữ liệu")
     choice = st.radio("Điều hướng", list(PAGES), label_visibility="collapsed")
     st.write("")
-    st.caption("Nhóm 04 - Data Visualization")
+    st.caption("Bước 1: Tổng quan → Bước 2: Khám phá → Bước 3: Diễn biến & Mùa vụ → Bước 4: Nhóm & Bản đồ → Bước 5: Đánh giá")
+    st.caption("Nhóm 04 · Trực quan hóa dữ liệu")
 
 D = get_data()
 with st.sidebar:

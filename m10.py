@@ -29,22 +29,22 @@ FIVE_COLS = ["Mã người thử", "Ngày", "Màn hình thử", "Nhớ được 
 PEER_COLS = ["Ngày", "Chiều", "Người review", "Nội dung / sản phẩm", "Điểm tốt", "Cần sửa", "Mức độ"]
 IMP_COLS = ["ID", "Ngày", "Nguồn phát hiện", "Vấn đề phát hiện", "Mức độ", "Trang/Module", "Cải tiến thực hiện", "Trạng thái", "Bằng chứng (trước/sau)", "Người sửa"]
 
-SOURCES = ["Kiểm thử người dùng", "Five-second test", "Peer review nhận", "Tự rà soát"]
+SOURCES = ["Kiểm thử người dùng", "Kiểm tra 5 giây (Five-second test)", "Đánh giá chéo (Peer review)", "Tự rà soát"]
 LEVELS = ["Thấp", "Trung bình", "Cao"]
 STATUS = ["Đề xuất", "Đang làm", "Đã làm", "Không làm"]
 TASK_RESULTS = ["Hoàn thành", "Hoàn thành một phần", "Không hoàn thành"]
 GROUPS = ["Người làm du lịch", "Sinh viên", "Du khách", "Khác"]
 
-# Các đề xuất ban đầu: rủi ro tôi thấy khi dựng app - CHƯA kiểm chứng, nên để trạng thái "Đề xuất".
+# Các đề xuất ban đầu: rủi ro thấy khi dựng app - chưa kiểm chứng, nên để trạng thái "Đề xuất".
 SEED = [
-    ["IMP-01", "", "Tự rà soát", "Thuật ngữ 'chỉ số phục hồi (2019 = 100)' có thể chưa rõ với người ngoài ngành", "Trung bình", "Câu chuyện",
-     "Thêm chú giải một dòng ngay dưới KPI nếu người thử không hiểu", "Đề xuất", "", ""],
-    ["IMP-02", "", "Tự rà soát", "Explorer chọn nhiều thị trường cùng lúc có thể rối", "Trung bình", "Explorer",
-     "Giới hạn số đường hiển thị / gợi ý nhóm thị trường nếu người thử bị lạc", "Đề xuất", "", ""],
-    ["IMP-03", "", "Tự rà soát", "Màu cam/xanh trạng thái chưa kiểm tra trên màn hình điện thoại và với người mù màu", "Trung bình", "Toàn app",
-     "Thêm nhãn chữ trạng thái cạnh màu; kiểm tra bằng bộ mô phỏng của house_style", "Đề xuất", "", ""],
-    ["IMP-04", "", "Tự rà soát", "Cuộc đua phục hồi có thể chạy quá nhanh/chậm với người xem lần đầu", "Thấp", "Đua phục hồi",
-     "Đo phản hồi tốc độ mặc định; chỉnh lại nếu ≥2 người nói khó theo dõi", "Đề xuất", "", ""],
+    ["IMP-01", "", "Tự rà soát", "Thuật ngữ 'chỉ số phục hồi (2019 = 100)' có thể chưa rõ với người ngoài ngành", "Trung bình", "Tổng quan",
+     "Thêm chú giải ngắn ngay dưới bộ lọc hoặc KPI nếu người thử chưa hiểu", "Đề xuất", "", ""],
+    ["IMP-02", "", "Tự rà soát", "Khám phá dữ liệu chọn nhiều thị trường cùng lúc có thể rối", "Trung bình", "Khám phá dữ liệu",
+     "Giới hạn số đường hiển thị hoặc gợi ý nhóm thị trường nếu người thử bị rối", "Đề xuất", "", ""],
+    ["IMP-03", "", "Tự rà soát", "Màu cam/xanh trạng thái chưa kiểm tra trên màn hình điện thoại và với người mù màu", "Trung bình", "Toàn ứng dụng",
+     "Thêm nhãn chữ trạng thái cạnh màu; kiểm tra bằng bộ mô phỏng màu sắc", "Đề xuất", "", ""],
+    ["IMP-04", "", "Tự rà soát", "Diễn biến phục hồi có thể phát quá nhanh/chậm với người xem lần đầu", "Thấp", "Diễn biến phục hồi",
+     "Đo phản hồi tốc độ mặc định; chỉnh lại nếu ≥ 2 người nói khó theo dõi", "Đề xuất", "", ""],
 ]
 
 
@@ -109,21 +109,23 @@ def answer_key(D) -> dict:
 
 
 TASKS = [
-    ("T1", "Ở tháng mới nhất, thị trường nào đang thiếu nhiều khách nhất so với cùng tháng 2019?", "Hỏi nhanh → câu 1", 60),
-    ("T2", "Nhật Bản đông khách nhất vào tháng nào trong năm?", "Hỏi nhanh → câu 2", 60),
-    ("T3", "Dùng bộ lọc so sánh Hàn Quốc và Trung Quốc từ 2022. Thị trường nào đang cao hơn?", "Explorer → khám phá tự do", 90),
-    ("T4", "Ở cuộc đua phục hồi, thị trường nào chạm mốc 100 đầu tiên?", "Đua phục hồi", 60),
-    ("T5", "Nói bằng lời của bạn: thông điệp chính của trang Câu chuyện là gì?", "Câu chuyện", 90),
+    ("T1", "Ở tháng mới nhất, thị trường nào đang thiếu nhiều khách nhất so với cùng tháng 2019?", "Khám phá dữ liệu → Trả lời câu hỏi thực tế (câu 1)", 60),
+    ("T2", "Nhật Bản đông khách nhất vào tháng nào trong năm?", "Khám phá dữ liệu → Trả lời câu hỏi thực tế (câu 2)", 60),
+    ("T3", "Dùng bộ lọc so sánh Hàn Quốc và Trung Quốc từ 2022. Thị trường nào đang cao hơn?", "Khám phá dữ liệu → Tự chọn dữ liệu", 90),
+    ("T4", "Ở trang Diễn biến phục hồi, thị trường nào đạt mốc 100 đầu tiên?", "Diễn biến phục hồi", 60),
+    ("T5", "Nói bằng lời của bạn: thông điệp chính của trang Tổng quan là gì?", "Tổng quan", 90),
 ]
 
 
 # ---------------------------------------------------------------- trang chính
 def page(D):
-    st.markdown("<h2 style='margin:.2rem 0 .1rem;font-weight:800'>🧪 Kiểm thử & cải tiến</h2>"
-                f"<p style='color:{ui.MUTED};margin:0 0 .8rem'>Một chỗ để lập kế hoạch, ghi kết quả thật từ người thử, phân tích và ghi lại các cải tiến.</p>",
-                unsafe_allow_html=True)
+    ui.page_header(
+        "🧪",
+        "Đánh giá và cải tiến",
+        "Lập kế hoạch kiểm thử, ghi nhận kết quả thực tế từ người tham gia, phân tích dữ liệu và theo dõi nhật ký cải tiến.",
+    )
     _progress()
-    t1, t2, t3, t4 = st.tabs(["📋 Kế hoạch", "📝 Ghi kết quả", "📊 Phân tích", "🛠️ Improvement log"])
+    t1, t2, t3, t4 = st.tabs(["📋 Kế hoạch kiểm thử", "📝 Ghi nhận kết quả", "📊 Phân tích kết quả", "🛠️ Nhật ký cải tiến"])
     with t1:
         _plan(D)
     with t2:
@@ -135,8 +137,8 @@ def page(D):
     st.write("")
     c1, _ = st.columns([1, 3])
     if any(LOGS.glob("*.csv")) if LOGS.exists() else False:
-        c1.download_button("⬇️ Tải toàn bộ log (ZIP)", _zip_logs(), "m10_logs.zip", "application/zip")
-    st.caption("Nếu app chạy trên hosting miễn phí, file ghi trong lúc chạy có thể mất khi app khởi động lại — hãy tải log về sau mỗi buổi thử.")
+        c1.download_button("⬇️ Tải toàn bộ nhật ký (ZIP)", _zip_logs(), "m10_logs.zip", "application/zip")
+    st.caption("Nếu ứng dụng chạy trên máy chủ miễn phí, file ghi tạm có thể mất khi khởi động lại — hãy tải nhật ký về sau mỗi buổi kiểm thử.")
 
 
 def _progress():
@@ -149,9 +151,9 @@ def _progress():
     dirs = set(peer["Chiều"]) if len(peer) else set()
     items = [
         (n_people >= 5, f"Người ngoài nhóm đã thử: {n_people}/5"),
-        (len(five) > 0, f"Five-second test: {five['Mã người thử'].nunique() if len(five) else 0} người"),
-        ({"Cho", "Nhận"} <= dirs, "Peer review: cả chiều cho và nhận"),
-        (n_done >= 8, f"Cải tiến đã làm: {n_done}/8"),
+        (len(five) > 0, f"Kiểm tra 5 giây: {five['Mã người thử'].nunique() if len(five) else 0} người"),
+        ({"Cho", "Nhận"} <= dirs, "Đánh giá chéo: cả hai chiều cho và nhận"),
+        (n_done >= 8, f"Cải tiến đã thực hiện: {n_done}/8"),
     ]
     cols = st.columns(4)
     for col, (ok, text) in zip(cols, items):
@@ -165,18 +167,18 @@ def _plan(D):
     key = answer_key(D)
     c1, c2 = st.columns([1.2, 1])
     with c1:
-        ui.card("<h4>🎯 Mục tiêu</h4><p>Kiểm tra xem người ngoài nhóm có <b>trả lời được câu hỏi thực tế của Ban Du lịch</b> bằng Explorer/Dashboard "
-                "không, nhanh cỡ nào, và vướng ở đâu.</p>"
-                "<h4>👥 Người thử</h4><p>Tối thiểu 5 người ngoài nhóm (ưu tiên người làm du lịch, sinh viên, du khách). Mỗi người một mã (P01, P02…) — "
-                "<b>không ghi tên thật</b>, có sự đồng ý của người thử.</p>"
-                "<h4>🧭 Quy trình mỗi người (~15 phút)</h4>"
-                "<ol><li>Giới thiệu 1 câu, xin đồng ý ghi nhận.</li><li><b>Five-second test</b> (tab Ghi kết quả).</li>"
-                "<li>5 nhiệm vụ bên dưới — nói to suy nghĩ (think-aloud), không gợi ý; đo thời gian.</li>"
-                "<li>Hỏi: chỗ nào khó hiểu nhất? Một thứ muốn thêm/bớt?</li></ol>", "sea")
+        ui.card("<h4>🎯 Mục tiêu</h4><p>Kiểm tra xem người ngoài nhóm có <b>tìm được câu trả lời cho các câu hỏi thực tế</b> bằng bảng điều khiển dữ liệu hay không, "
+                "mất bao lâu và gặp khó khăn ở bước nào.</p>"
+                "<h4>👥 Người tham gia</h4><p>Tối thiểu 5 người ngoài nhóm (ưu tiên người làm du lịch, sinh viên, du khách). Mỗi người được gắn một mã (P01, P02…) — "
+                "<b>không ghi tên thật</b>, chỉ ghi nhận khi có sự đồng ý.</p>"
+                "<h4>🧭 Quy trình mỗi lượt (~15 phút)</h4>"
+                "<ol><li>Giới thiệu ngắn gọn mục đích, xin phép ghi nhận ẩn danh.</li><li><b>Kiểm tra 5 giây (Five-second test)</b> tại tab Ghi nhận kết quả.</li>"
+                "<li>Thực hiện 5 nhiệm vụ bên dưới — <b>vừa thực hiện vừa nói suy nghĩ (Think-aloud)</b>, không gợi ý và bấm giờ.</li>"
+                "<li>Phỏng vấn nhanh: chỗ nào khó hiểu nhất? Điểm nào muốn thêm hoặc bỏ?</li></ol>", "sea")
     with c2:
-        ui.card("<h4>✅ Cách chấm</h4><ul><li><b>Hoàn thành</b>: đúng đáp án, không cần gợi ý.</li>"
-                "<li><b>Một phần</b>: đúng hướng nhưng cần gợi ý hoặc sai chi tiết.</li><li><b>Không hoàn thành</b>: bỏ cuộc/sai.</li></ul>"
-                "<p>Ghi thêm số lần người thử bí/nhầm và câu nói đáng chú ý. Chấp nhận kết quả xấu — đó là cải tiến cần ghi.</p>", "sun")
+        ui.card("<h4>✅ Quy tắc chấm điểm</h4><ul><li><b>Hoàn thành</b>: đúng đáp án, không cần gợi ý.</li>"
+                "<li><b>Hoàn thành một phần</b>: đúng hướng nhưng cần gợi ý hoặc sai chi tiết nhỏ.</li><li><b>Không hoàn thành</b>: bỏ cuộc hoặc trả lời sai.</li></ul>"
+                "<p>Ghi nhận thêm số lần người tham gia bị nhầm/bí và các nhận xét đáng chú ý. Mọi vướng mắc thực tế đều là cơ sở để cải tiến.</p>", "sun")
     st.markdown("#### Nhiệm vụ cho người thử")
     rows = [{"Mã": t, "Nhiệm vụ": txt, "Khu vực trong app": where, "Thời gian mục tiêu (giây)": sec} for t, txt, where, sec in TASKS]
     ui.table(pd.DataFrame(rows))
@@ -209,7 +211,7 @@ def _five_stimulus(D, kind: str):
 
 
 def _record(D):
-    a, b, c = st.tabs(["Nhiệm vụ", "Five-second test", "Peer review"])
+    a, b, c = st.tabs(["Nhiệm vụ", "Kiểm tra 5 giây", "Đánh giá chéo"])
     with a:
         with st.form("f_task", clear_on_submit=True):
             c1, c2, c3 = st.columns(3)
@@ -220,7 +222,7 @@ def _record(D):
             secs = c4.number_input("Thời gian (giây)", min_value=0.0, step=1.0)
             res = c5.selectbox("Kết quả", TASK_RESULTS)
             errs = c6.number_input("Số lần nhầm/bí", min_value=0, step=1)
-            note = st.text_area("Think-aloud / câu nói đáng chú ý", height=80)
+            note = st.text_area("Ghi chú lúc nói suy nghĩ (Think-aloud)", height=80)
             ok = st.checkbox("Người thử đã đồng ý cho ghi nhận (ẩn danh)")
             if st.form_submit_button("➕ Lưu lượt thử", type="primary"):
                 if not (pid.strip() and ok and secs > 0):
@@ -233,7 +235,7 @@ def _record(D):
         if len(df):
             ui.table(df.tail(10))
     with b:
-        st.caption("Màn hình hiện đúng 5 giây rồi biến mất. Sau đó hỏi: *bạn nhớ được gì? thông điệp chính là gì?*")
+        st.caption("Màn hình hiển thị đúng 5 giây rồi ẩn đi. Sau đó hỏi: *bạn nhớ được gì? thông điệp chính là gì?*")
         kind = st.radio("Màn hình thử", ["Biểu đồ chênh lệch so với 2019", "Đường chỉ số gộp"], horizontal=True)
         holder = st.empty()
         if st.button("▶ Bắt đầu 5 giây"):
@@ -248,7 +250,7 @@ def _record(D):
             grade = c2.selectbox("Chấm thông điệp chính", ["Đúng", "Một phần", "Sai"])
             rec = st.text_area("Người thử nhớ được gì? (ghi nguyên văn)", height=70)
             msg = st.text_input("Họ nói thông điệp chính là gì?")
-            if st.form_submit_button("➕ Lưu five-second test", type="primary"):
+            if st.form_submit_button("➕ Lưu kiểm tra 5 giây", type="primary"):
                 if not pid.strip():
                     st.warning("Cần mã người thử.")
                 elif _append("five_second.csv", FIVE_COLS, {"Mã người thử": pid.strip(), "Ngày": date.today().isoformat(), "Màn hình thử": kind,
@@ -257,18 +259,18 @@ def _record(D):
     with c:
         with st.form("f_peer", clear_on_submit=True):
             c1, c2 = st.columns(2)
-            way = c1.radio("Chiều", ["Nhận", "Cho"], horizontal=True, help="Nhận = nhóm khác review bài mình; Cho = mình review bài nhóm khác")
-            who = c2.text_input("Người/nhóm review")
-            what = st.text_input("Nội dung / sản phẩm được review")
+            way = c1.radio("Chiều đánh giá", ["Nhận", "Cho"], horizontal=True, help="Nhận = nhóm khác đánh giá bài mình; Cho = mình đánh giá bài nhóm khác")
+            who = c2.text_input("Người/nhóm đánh giá")
+            what = st.text_input("Nội dung / sản phẩm được đánh giá")
             good = st.text_area("Điểm tốt", height=60)
             fix = st.text_area("Cần sửa", height=60)
             lvl = st.select_slider("Mức độ cần sửa", LEVELS, value="Trung bình")
-            if st.form_submit_button("➕ Lưu peer review", type="primary"):
+            if st.form_submit_button("➕ Lưu đánh giá chéo", type="primary"):
                 if not (who.strip() and what.strip()):
-                    st.warning("Cần tên người review và nội dung được review.")
+                    st.warning("Cần tên người đánh giá và nội dung được đánh giá.")
                 elif _append("peer_review.csv", PEER_COLS, {"Ngày": date.today().isoformat(), "Chiều": way, "Người review": who.strip(),
                                                             "Nội dung / sản phẩm": what.strip(), "Điểm tốt": good.strip(), "Cần sửa": fix.strip(), "Mức độ": lvl}):
-                    st.success("Đã lưu. Nhớ chuyển mục 'Cần sửa' sang Improvement log.")
+                    st.success("Đã lưu. Nhớ chuyển mục 'Cần sửa' sang Nhật ký cải tiến.")
         pr = _read("peer_review.csv", PEER_COLS)
         if len(pr):
             ui.table(pr.tail(10))
@@ -279,7 +281,7 @@ def _analysis():
     df = _read("user_tests.csv", TEST_COLS)
     five = _read("five_second.csv", FIVE_COLS)
     if df.empty and five.empty:
-        ui.card("<h4>Chưa có dữ liệu</h4><p>Tab này chỉ hiện số liệu khi nhóm nhập kết quả thật từ người thử. "
+        ui.card("<h4>Chưa có dữ liệu</h4><p>Tab này chỉ hiện số liệu khi nhóm nhập kết quả thật từ người tham gia kiểm thử. "
                 "Không có số liệu mẫu hay số liệu do AI tạo.</p>")
         return
     if len(df):
@@ -305,25 +307,25 @@ def _analysis():
                        f"{n} người thử · xanh ≥ 80% · cam &lt; 80%")
         ui.show(fig, key="an_task")
         if n < 10:
-            st.caption(f"⚠️ Chỉ {n} người thử: đọc như dấu hiệu định tính, không phải thống kê.")
-        with st.expander("Bảng chi tiết & think-aloud"):
+            st.caption(f"⚠️ Chỉ có {n} người thử: nên đọc như dấu hiệu định tính, không suy diễn thống kê.")
+        with st.expander("Bảng chi tiết & ghi chú nói suy nghĩ"):
             ui.table(df)
     if len(five):
-        st.markdown("#### Five-second test")
+        st.markdown("#### Kiểm tra 5 giây")
         share = 100 * (five["Chấm"] == "Đúng").mean()
         st.metric("Nắm đúng thông điệp chính sau 5 giây", ui.pct(share, signed=False), f"{len(five)} người")
         ui.table(five[["Mã người thử", "Màn hình thử", "Nhớ được gì", "Thông điệp chính", "Chấm"]])
 
 
-# ---------------------------------------------------------------- 4. improvement log
+# ---------------------------------------------------------------- 4. nhật ký cải tiến
 def _improvements():
     df = _read("improvement_log.csv", IMP_COLS)
     if df.empty:
         df = pd.DataFrame(SEED, columns=IMP_COLS)
         df["Ngày"] = date.today().isoformat()
     done = int((df["Trạng thái"] == "Đã làm").sum())
-    st.markdown(f"**{done}/8** cải tiến đã làm · yêu cầu tối thiểu 8 · mỗi dòng nên có nguồn phát hiện và bằng chứng trước/sau.")
-    st.caption("Bốn dòng đầu là *đề xuất tự rà soát* khi dựng app, chưa kiểm chứng — giữ, sửa hoặc xoá tuỳ kết quả thử thật.")
+    st.markdown(f"**{done}/8** cải tiến đã làm · yêu cầu tối thiểu 8 · mỗi dòng nên ghi rõ nguồn phát hiện và bằng chứng trước/sau.")
+    st.caption("Bốn dòng đầu là *đề xuất tự rà soát* khi xây dựng ứng dụng, chưa kiểm chứng — giữ, sửa hoặc xóa tùy theo kết quả kiểm thử thật.")
     edited = st.data_editor(
         df, num_rows="dynamic", key="imp_editor", hide_index=True, **ui._stretch(),
         column_config={
@@ -334,9 +336,9 @@ def _improvements():
             "Cải tiến thực hiện": st.column_config.TextColumn(width="large"),
         })
     c1, c2, _ = st.columns([1, 1, 2])
-    if c1.button("💾 Lưu improvement log", type="primary"):
+    if c1.button("💾 Lưu nhật ký cải tiến", type="primary"):
         out = edited.copy()
         out["ID"] = [x if isinstance(x, str) and x.strip() else f"IMP-{i + 1:02d}" for i, x in enumerate(out["ID"])]
         if _write("improvement_log.csv", out[IMP_COLS]):
             st.success("Đã lưu. Tải CSV để nộp kèm bài.")
-    c2.download_button("⬇️ Tải improvement_log.csv", edited.to_csv(index=False).encode("utf-8-sig"), "improvement_log.csv", "text/csv")
+    c2.download_button("⬇️ Tải nhật ký (CSV)", edited.to_csv(index=False).encode("utf-8-sig"), "improvement_log.csv", "text/csv")
