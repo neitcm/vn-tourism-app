@@ -283,12 +283,9 @@ _ENHANCE_HTML = """
   const doc = window.parent.document;
   const win = window.parent;
 
-  const RESET_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>';
-
   const TOOLTIPS = {
     zoomIn: "Phóng to",
     zoomOut: "Thu nhỏ",
-    pan: "Di chuyển biểu đồ",
     boxZoom: "Khoanh vùng phóng to",
     reset: "Khôi phục ban đầu",
     autoscale: "Xem toàn bộ biểu đồ",
@@ -304,7 +301,6 @@ _ENHANCE_HTML = """
     if (attr === "geo" && val === "zoomin") return "zoomIn";
     if (attr === "geo" && val === "zoomout") return "zoomOut";
     if (attr === "dragmode" && val === "zoom") return "boxZoom";
-    if (attr === "dragmode" && val === "pan") return "pan";
     if ((attr === "zoom" && val === "reset") || (attr === "geo" && val === "reset")) return "reset";
     if (attr === "zoom" && val === "auto") return "autoscale";
     if ((!attr && !val && /png|image|download/i.test(title)) || attr === "toImage") return "download";
@@ -315,42 +311,13 @@ _ENHANCE_HTML = """
     const mb = gd.querySelector(".modebar");
     if (!mb) return;
     const data = gd._fullData || gd.data || [];
-    const isTreemap = data.some(t => t.type === "treemap");
-    const isGeo = data.some(t => t.type === "scattergeo");
-    const order = isTreemap
-      ? ["download"]
-      : (isGeo
-          ? ["zoomIn", "zoomOut", "pan", "reset", "download"]
-          : ["zoomIn", "zoomOut", "pan", "reset", "autoscale", "download"]);
-
-    const btns = Array.from(mb.querySelectorAll("a.modebar-btn"));
-    const byKey = {};
+    const btns = Array.from(mb.querySelectorAll(".modebar-btn"));
     btns.forEach(b => {
       const k = classifyBtn(b);
-      if (k && !byKey[k]) byKey[k] = b;
-    });
-
-    let grp = mb.querySelector(".modebar-group.vt-ordered");
-    if (!grp) {
-      mb.innerHTML = "";
-      grp = doc.createElement("div");
-      grp.className = "modebar-group vt-ordered";
-      mb.appendChild(grp);
-    } else {
-      grp.innerHTML = "";
-    }
-
-    order.forEach(k => {
-      const b = byKey[k];
-      if (!b) return;
       if (TOOLTIPS[k]) {
         b.setAttribute("data-title", TOOLTIPS[k]);
         b.setAttribute("aria-label", TOOLTIPS[k]);
       }
-      if (k === "reset") {
-        b.innerHTML = RESET_SVG;
-      }
-      grp.appendChild(b);
     });
   }
 
@@ -714,13 +681,32 @@ def _stretch() -> dict:
 PLOT_CFG = {
     "displaylogo": False,
     "displayModeBar": True,
-    "modeBarButtonsToRemove": ["select2d", "lasso2d", "hoverClosestCartesian", "hoverCompareCartesian", "toggleSpikelines"],
-    "modeBarButtonsToAdd": ["zoomIn2d", "zoomOut2d", "pan2d", "autoScale2d", "resetScale2d"],
+    "modeBarButtons": [["zoomIn2d", "zoomOut2d", "zoom2d", "resetScale2d", "autoScale2d", "toImage"]],
 }
 
 
+def _plot_config(fig):
+    """Use only native modebar tools supported by each chart family."""
+    types = {trace.type for trace in fig.data}
+    if types and types <= {"treemap", "sunburst", "icicle", "funnelarea", "pie"}:
+        return {**PLOT_CFG, "modeBarButtons": [["toImage"]]}
+    if "scattergeo" in types or "choropleth" in types:
+        return {
+            **PLOT_CFG,
+            "modeBarButtons": [["zoomInGeo", "zoomOutGeo", "resetGeo", "toImage"]],
+        }
+    if types & {"scatter3d", "surface", "mesh3d", "cone", "streamtube", "volume", "isosurface"}:
+        return {
+            **PLOT_CFG,
+            "modeBarButtons": [["zoom3d", "resetCameraDefault3d", "toImage"]],
+        }
+    if "parcoords" in types or "table" in types:
+        return {**PLOT_CFG, "modeBarButtons": [["toImage"]]}
+    return PLOT_CFG
+
+
 def show(fig, key=None):
-    st.plotly_chart(fig, key=key, config=PLOT_CFG, **_stretch())
+    st.plotly_chart(fig, key=key, config=_plot_config(fig), **_stretch())
 
 
 def table(df, key=None, **kw):
