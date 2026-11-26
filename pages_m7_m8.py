@@ -53,6 +53,13 @@ def _guide_box(title: str, body_html: str):
         )
 
 
+def _set_title(fig, title: str, top_margin: int | None = None):
+    if hasattr(ui, "set_title"):
+        return ui.set_title(fig, title, top_margin)
+    fig.update_layout(title=dict(text=f"<b>{title}</b>", x=0.01, xanchor="left"), margin=dict(t=top_margin or 56))
+    return fig
+
+
 def _region_color(r: str) -> str:
     return REGION_COLOR.get(r, hs.OTHER_COLOR)
 
@@ -217,10 +224,13 @@ def _heatmap(D):
     fig.update_yaxes(showgrid=False, tickfont=dict(size=11))
     fig.update_xaxes(tickformat="%Y", dtick="M12", showgrid=False)
 
-    ui.chart_title(
-        f"Biến động {metric.lower()} của {len(piv)} thị trường ({y0}–{end.year})",
-        subtitle
+    heat_title = (
+        f"Bản đồ nhiệt về lượt khách giữa các thị trường và thời gian ({y0}–{end.year})"
+        if metric == "Lượt khách thực tế"
+        else f"Bản đồ nhiệt chỉ số phục hồi giữa các thị trường và thời gian ({y0}–{end.year})"
     )
+    _set_title(fig, heat_title)
+    ui.chart_title("", f"{len(piv)} thị trường · {subtitle}")
 
     ui.show(fig, key="m7_heat")
 
@@ -316,9 +326,10 @@ def _treemap(D):
     top = reg.sort_values("arr", ascending=False).iloc[0]
     share = top["arr"] / reg["arr"].sum()
     display_month = end.month if year == end.year else 12
+    _set_title(fig, f"Cơ cấu lượt khách theo thị trường (T1–T{display_month}/{year})")
     ui.chart_title(
-        f"{top['continent']} chiếm {ui.n0(100 * share)}% lượt khách trong {len(agg)} thị trường",
-        f"Lượng khách cộng dồn từ T1–T{display_month}/{year} · lồng theo khu vực → thị trường"
+        "",
+        f"{top['continent']} chiếm {ui.n0(100 * share)}% lượt khách trong {len(agg)} thị trường · lồng theo khu vực → thị trường"
         + (" · màu = chỉ số phục hồi so với cùng kỳ 2019" if mode == "Chỉ số phục hồi" else " · màu = khu vực"),
     )
     ui.show(fig, key="m7_tree")
@@ -360,8 +371,8 @@ def _parallel(D):
     ui.style_fig(fig, 480)
     fig.update_yaxes(title="Giá trị chuẩn hoá (z-score)", showgrid=True, gridcolor=GRID)
     fig.update_xaxes(showgrid=True, gridcolor=GRID)
-    ui.chart_title("Nhóm thị trường xa có biên độ mùa vụ trung bình cao hơn",
-                   f"Mỗi đường biểu diễn một thị trường ({len(seg)} thị trường) · màu = nhóm thị trường · đường nét đứt tại mức 0 = trung bình mẫu")
+    _set_title(fig, "So sánh đặc điểm các thị trường qua nhiều chỉ số")
+    ui.chart_title("", f"Nhóm thị trường xa có biên độ mùa vụ trung bình cao hơn ({len(seg)} thị trường · màu = nhóm thị trường · đường nét đứt tại 0 = trung bình mẫu)")
     ui.show(fig, key="m7_par")
     ui.source("Bảng dữ liệu tổng hợp VNAT/NSO; các đặc trưng được chuẩn hóa theo z-score.")
 
@@ -415,9 +426,10 @@ def _draw_map(f: pd.DataFrame, projection: str, view_name: str, date, lon_rot: i
     if projection == "orthographic":
         fig.update_geos(projection_rotation=dict(lon=lon_rot, lat=20))
     fig.update_layout(
-        height=height, margin=dict(t=10, l=5, r=5, b=45), paper_bgcolor="rgba(0,0,0,0)",
+        height=height, margin=dict(t=56, l=5, r=5, b=45), paper_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Be Vietnam Pro, Segoe UI, Roboto, Arial, sans-serif", color=INK), separators=",.",
         legend=dict(orientation="h", x=0.5, xanchor="center", y=-0.02))
+    _set_title(fig, f"Phân bố các chỉ số du lịch trên bản đồ ({view_name} · {ui.mlabel(date)})")
     return fig
 
 
@@ -464,18 +476,15 @@ def page_beyond_flat(D):
         for col, (name, r) in zip(cols, reg.iterrows()):
             ui.kpi(col, name, ui.n0(r["idx"]), f"{ui.big(r['arrivals'])} lượt · chỉ số phục hồi khu vực")
         st.write("")
-        title = f"Lượng khách từ các thị trường quốc tế đến Việt Nam ({ui.mlabel(date)})"
         ui.chart_title(
-            title,
-            f"Kích thước điểm thể hiện lượng khách; màu sắc phân biệt khu vực. Di chuột vào từng điểm để xem số khách và chỉ số phục hồi (khu vực dẫn đầu: {reg.index[0]} · {ui.n0(reg['idx'].iloc[0])}).",
+            "",
+            f"Kích thước điểm thể hiện lượt khách; màu sắc phân biệt khu vực. Di chuột vào từng điểm để xem số khách và chỉ số phục hồi (khu vực dẫn đầu: {reg.index[0]} · {ui.n0(reg['idx'].iloc[0])}).",
         )
         if view == "Cạnh nhau":
             a, b = st.columns(2)
             with a:
-                st.caption("Quả địa cầu 3D")
                 ui.show(_draw_map(f, "orthographic", "Quả địa cầu 3D", date, rot, 480), key="m8_globe_c")
             with b:
-                st.caption("Bản đồ 2D")
                 ui.show(_draw_map(f, "natural earth", "Bản đồ 2D", date, rot, 480), key="m8_flat_c")
         elif view == "Địa cầu 3D":
             ui.show(_draw_map(f, "orthographic", "Quả địa cầu 3D", date, rot), key="m8_globe")
@@ -498,8 +507,8 @@ def page_beyond_flat(D):
         ui.style_fig(fig, 60 + 26 * len(s), legend=False, margin=dict(l=10, r=60, t=10, b=10))
         fig.update_yaxes(showgrid=False)
         fig.update_xaxes(visible=False)
-        ui.chart_title(f"20 thị trường dẫn đầu theo {metric.lower()} ({ui.mlabel(avail[-1])})",
-                       "Màu sắc phân biệt khu vực (đồng bộ với bản đồ). Đường chấm dọc (nếu có) đánh dấu mốc năm 2019 = 100.")
+        _set_title(fig, f"Quy mô và thứ hạng 20 thị trường dẫn đầu theo {metric.lower()} ({ui.mlabel(avail[-1])})")
+        ui.chart_title("", "Màu sắc phân biệt khu vực (đồng bộ với bản đồ). Đường chấm dọc (nếu có) đánh dấu mốc năm 2019 = 100.")
         ui.show(fig, key="m8_bars")
         ui.source("Bảng dữ liệu tổng hợp VNAT/NSO.")
     with t3:
@@ -529,7 +538,8 @@ def _m8_experiment():
         fig.update_layout(barmode="group")
         ui.style_fig(fig, 380)
         fig.update_yaxes(title="Giây/câu trung bình")
-        ui.chart_title("Thời gian trả lời trung bình từng câu: bản đồ 2D so với địa cầu 3D", f"{log['person'].nunique() if 'person' in log else 5} người tham gia · dữ liệu từ nhật ký kiểm thử")
+        _set_title(fig, "Thời gian hoàn thành câu hỏi giữa bản đồ 2D và địa cầu 3D")
+        ui.chart_title("", f"{log['person'].nunique() if 'person' in log else 5} người tham gia · dữ liệu từ nhật ký kiểm thử")
         ui.show(fig, key="m8_exp_full")
     else:
         fig = go.Figure()
@@ -539,8 +549,8 @@ def _m8_experiment():
         fig.update_layout(barmode="group")
         ui.style_fig(fig, 380)
         fig.update_yaxes(title="Giây/câu trung bình", range=[0, 40])
-        ui.chart_title("Bản đồ 2D giúp tìm thông tin nhanh hơn địa cầu 3D với cùng độ chính xác",
-                       "5 người tham gia · 15 lượt trả lời mỗi phiên bản")
+        _set_title(fig, "Thời gian hoàn thành câu hỏi giữa bản đồ 2D và địa cầu 3D")
+        ui.chart_title("", "Bản đồ 2D giúp tìm thông tin nhanh hơn địa cầu 3D với cùng độ chính xác (5 người tham gia · 15 lượt trả lời mỗi phiên bản)")
         ui.show(fig, key="m8_exp_sum")
     ui.card("<h4>Kết quả chính</h4><p><b>Kết quả kiểm thử cho thấy bản đồ 2D giúp người tham gia tìm thông tin nhanh hơn địa cầu 3D, trong khi tỷ lệ trả lời đúng ở hai phiên bản tương đương</b> "
             "(câu hỏi xác định khu vực có chỉ số phục hồi cao nhất: 18,6 giây ở bản 2D so với 33,4 giây ở bản 3D). "

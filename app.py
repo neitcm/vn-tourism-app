@@ -16,7 +16,7 @@ import house_style as hs
 import m10
 import pages_m7_m8 as m78
 import ui
-if not hasattr(ui, "page_header") or not hasattr(ui, "guide_box"):
+if not hasattr(ui, "page_header") or not hasattr(ui, "guide_box") or not hasattr(ui, "set_title"):
     ui = importlib.reload(ui)
     m78 = importlib.reload(m78)
     m10 = importlib.reload(m10)
@@ -69,6 +69,13 @@ def _guide_box(title: str, body_html: str):
             f"<div style='font-weight:700;margin-bottom:.25rem;color:#25533F'>{title}</div>{body_html}</div>",
             unsafe_allow_html=True,
         )
+
+
+def _set_title(fig, title: str, top_margin: int | None = None):
+    if hasattr(ui, "set_title"):
+        return ui.set_title(fig, title, top_margin)
+    fig.update_layout(title=dict(text=f"<b>{title}</b>", x=0.01, xanchor="left"), margin=dict(t=top_margin or 56))
+    return fig
 
 
 def add_gap_band(fig, start="2020-04-01", end="2021-12-31", text="Không có số liệu theo thị trường"):
@@ -138,8 +145,8 @@ def page_story(D):
     full19 = m.loc[(m["year"] == 2019) & m["arrivals"].notna()].groupby("market")["arrivals"].agg(["sum", "count"])
     full19 = full19[full19["count"] == 12]["sum"].sort_values(ascending=False)
     share2 = 100 * full19.head(2).sum() / full19.sum()
-    ui.chart_title(f"{full19.index[0]} và {full19.index[1]} chiếm {ui.n0(share2)}% lượt khách năm 2019",
-                   f"10 thị trường có tổng lượt khách năm 2019 cao nhất · tỷ trọng tính trên {len(full19)} thị trường đủ dữ liệu 12 tháng")
+    _set_title(fig, "Top thị trường theo tổng lượt khách năm 2019")
+    ui.chart_title("", f"{full19.index[0]} và {full19.index[1]} chiếm {ui.n0(share2)}% lượt khách năm 2019 · 10 thị trường lớn nhất trong {len(full19)} thị trường đủ dữ liệu 12 tháng")
     ui.show(fig, key="s1")
     ui.source("Cục Du lịch Quốc gia Việt Nam (VNAT) và Tổng cục Thống kê (NSO).")
 
@@ -156,8 +163,8 @@ def page_story(D):
     fig.add_hline(y=100, line_dash="dot", line_color=INK, annotation_text="Mốc 2019 = 100", annotation_position="top left")
     ui.style_fig(fig, 340, legend=False)
     fig.update_yaxes(title="Chỉ số phục hồi gộp (2019 = 100)")
-    ui.chart_title("Quý I/2020: lượng khách giảm sâu từ mức 2019 trước khi dữ liệu bị gián đoạn đến 2022",
-                   "Chỉ số gộp = tổng lượt khách trong tháng ÷ tổng lượt khách cùng tháng năm 2019 (chỉ tính các thị trường có mốc so sánh)")
+    _set_title(fig, "Diễn biến phục hồi lượng khách quốc tế giai đoạn 2017–2022")
+    ui.chart_title("", "Quý I/2020 giảm sâu từ mức 2019 trước khi dữ liệu bị gián đoạn đến 2022 (chỉ số gộp = tổng lượt khách ÷ tổng lượt khách cùng tháng 2019)")
     ui.show(fig, key="s2")
     ui.source("Bảng dữ liệu tổng hợp VNAT/NSO. Vùng xám là giai đoạn không công bố số liệu theo từng thị trường (không phải giá trị 0).")
 
@@ -174,9 +181,10 @@ def page_story(D):
                            ax=-60, ay=-55, showarrow=True, arrowhead=2, arrowcolor=INK, font=dict(size=12))
     ui.style_fig(fig, 360, legend=False)
     fig.update_yaxes(title="Chỉ số phục hồi gộp (2019 = 100)")
-    title3 = (f"Tổng lượng khách lần đầu chạm mốc 2019 vào {ui.mlabel(cross.index[0])} và đạt {ui.n0(s3.iloc[-1])} vào {ui.mlabel(s3.index[-1])}"
-              if len(cross) else "Tổng lượng khách vẫn chưa chạm mốc 2019")
-    ui.chart_title(title3, "Chỉ số phục hồi gộp hàng tháng (2019 = 100); nhịp lên xuống phản ánh biến động mùa vụ trong năm")
+    note3 = (f"Tổng lượng khách lần đầu chạm mốc 2019 vào {ui.mlabel(cross.index[0])} và đạt {ui.n0(s3.iloc[-1])} vào {ui.mlabel(s3.index[-1])}"
+             if len(cross) else "Tổng lượng khách vẫn chưa chạm mốc 2019")
+    _set_title(fig, f"Diễn biến phục hồi của các thị trường giai đoạn 2022–{ui.mlabel(s3.index[-1])}")
+    ui.chart_title("", f"{note3} · nhịp lên xuống phản ánh biến động mùa vụ trong năm")
     ui.show(fig, key="s3")
     ui.source("Bảng dữ liệu tổng hợp VNAT/NSO.")
 
@@ -197,9 +205,8 @@ def page_story(D):
     fig.update_xaxes(showgrid=True, gridcolor=GRID, title="Chênh lệch lượt khách so với cùng tháng 2019")
     top_pos = g.sort_values("gap", ascending=False).iloc[0]
     top_neg = g.sort_values("gap").iloc[0]
-    ui.chart_title(f"{top_pos['market']} tăng thêm nhiều nhất, trong khi {top_neg['market']} còn thiếu hụt lớn nhất",
-                   f"16 thị trường có chênh lệch lớn nhất ({ui.mlabel(end)} so với {ui.mlabel(end).replace(str(end.year), '2019')}). "
-                   "Cam: chưa phục hồi · Xám: quanh mốc 2019 · Xanh: vượt 2019")
+    _set_title(fig, f"Chênh lệch lượt khách theo thị trường so với cùng tháng năm 2019 ({ui.mlabel(end)})")
+    ui.chart_title("", f"{top_pos['market']} tăng thêm nhiều nhất, trong khi {top_neg['market']} còn thiếu hụt lớn nhất (16 thị trường chênh lệch lớn nhất · Cam: chưa phục hồi · Xám: quanh 2019 · Xanh: vượt 2019)")
     ui.show(fig, key="s4")
     ui.source("Bảng dữ liệu tổng hợp VNAT/NSO. Chỉ gồm các thị trường có số liệu gốc năm 2019.")
 
@@ -338,10 +345,16 @@ def _explorer_free(D):
     fig.update_layout(hovermode="x unified")
     fig.update_yaxes(title=ytitle)
     fig.update_xaxes(range=[rng[0], pd.Timestamp(rng[1]) + pd.DateOffset(months=4)])
-    ui.chart_title(f"{ytitle}: {', '.join(sel[:3])}{'…' if len(sel) > 3 else ''}",
-                   f"Giai đoạn {ui.mlabel(rng[0])} – {ui.mlabel(rng[1])}"
+    if metric.startswith("Chỉ số"):
+        main_title = f"Diễn biến phục hồi của các thị trường ({ui.mlabel(rng[0])} – {ui.mlabel(rng[1])})"
+    elif metric.startswith("Lượt"):
+        main_title = f"Diễn biến lượt khách quốc tế theo thời gian ({ui.mlabel(rng[0])} – {ui.mlabel(rng[1])})"
+    else:
+        main_title = f"Tỷ trọng lượt khách theo thị trường qua thời gian ({ui.mlabel(rng[0])} – {ui.mlabel(rng[1])})"
+    _set_title(fig, main_title)
+    ui.chart_title("", f"Thị trường đang chọn: {', '.join(sel[:4])}{'…' if len(sel) > 4 else ''}"
                    + (" · đang bật làm mượt trung bình trượt 3 tháng" if smooth else "")
-                   + " · mỗi đường tương ứng một thị trường đã chọn")
+                   + " · mỗi đường tương ứng một thị trường")
     ui.show(fig, key="ex_main")
 
     # thẻ số liệu tháng mới nhất
@@ -372,10 +385,9 @@ def _explorer_free(D):
             cliponaxis=False, customdata=np.stack([s["arrivals"]], 1),
             hovertemplate="<b>%{y}</b><br>Chỉ số phục hồi: %{x:.0f}<br>Lượt khách: %{customdata[0]:,.0f}<extra></extra>"))
         fig.add_vline(x=100, line_dash="dot", line_color=INK, annotation_text="Mốc 2019 = 100", annotation_position="top right")
-        rank_title = "Xếp hạng mức phục hồi giữa các thị trường"
-        rank_sub = (f"So sánh chỉ số phục hồi của 15 thị trường dẫn đầu trong {ui.mlabel(rk_date)}. "
-                    "Chỉ số cao hơn 100 cho thấy lượng khách đã vượt cùng tháng năm 2019 (Cam: dưới 95 · Xám: 95–105 · Xanh: trên 105). "
-                    "Lưu ý: bảng xếp hạng này dùng bộ lọc tháng và chỉ số riêng, độc lập với biểu đồ xu hướng phía trên.")
+        rank_title = f"Mức phục hồi theo từng tháng so với năm 2019 ({ui.mlabel(rk_date)})"
+        rank_sub = (f"15 thị trường có chỉ số phục hồi cao nhất trong {ui.mlabel(rk_date)} (Cam: dưới 95 · Xám: 95–105 · Xanh: trên 105). "
+                    "Lưu ý: bộ lọc xếp hạng bên dưới độc lập với biểu đồ xu hướng phía trên.")
     elif rk_metric.startswith("Lượt"):
         s = snap_rk.sort_values("arrivals", ascending=False).head(15).iloc[::-1]
         fig = go.Figure(go.Bar(
@@ -383,7 +395,7 @@ def _explorer_free(D):
             marker_color=[colors[k] for k in s["market"]], text=[ui.big(v) for v in s["arrivals"]], textposition="outside",
             cliponaxis=False, customdata=np.stack([s["recovery_index"].fillna(-1)], 1),
             hovertemplate="<b>%{y}</b><br>Lượt khách: %{x:,.0f}<br>Chỉ số phục hồi: %{customdata[0]:.0f}<extra></extra>"))
-        rank_title = "Xếp hạng lượt khách giữa các thị trường"
+        rank_title = f"Quy mô lượt khách giữa các thị trường ({ui.mlabel(rk_date)})"
         rank_sub = (f"15 thị trường có số lượt khách thực tế cao nhất trong {ui.mlabel(rk_date)}. "
                     "Bộ lọc xếp hạng bên dưới hoạt động độc lập với biểu đồ xu hướng phía trên.")
     else:
@@ -395,14 +407,15 @@ def _explorer_free(D):
             marker_color=[colors[k] for k in s["market"]], text=[ui.pct(v, signed=False) for v in s["share"]], textposition="outside",
             cliponaxis=False, customdata=np.stack([s["arrivals"]], 1),
             hovertemplate="<b>%{y}</b><br>Tỷ trọng: %{x:.1f}%<br>Lượt khách: %{customdata[0]:,.0f}<extra></extra>"))
-        rank_title = "Xếp hạng tỷ trọng đóng góp giữa các thị trường"
+        rank_title = f"Tỷ trọng đóng góp lượt khách theo thị trường ({ui.mlabel(rk_date)})"
         rank_sub = (f"15 thị trường đóng góp tỷ trọng lớn nhất trong tổng lượt khách {ui.mlabel(rk_date)}. "
                     "Bộ lọc xếp hạng bên dưới hoạt động độc lập với biểu đồ xu hướng phía trên.")
 
     ui.style_fig(fig, 440, legend=False, margin=dict(l=10, r=70, t=10, b=10))
     fig.update_yaxes(showgrid=False)
     fig.update_xaxes(showgrid=False, visible=False)
-    ui.chart_title(rank_title, rank_sub)
+    _set_title(fig, rank_title)
+    ui.chart_title("", rank_sub)
     ui.show(fig, key="ex_rank_chart")
 
     with st.expander("📄 Xem và tải bảng dữ liệu đang lọc"):
@@ -431,8 +444,8 @@ def _explorer_qa(D):
         fig.update_yaxes(showgrid=False)
         fig.update_xaxes(visible=False)
         top = short.iloc[-1]
-        ui.chart_title(f"{top['market']} còn thiếu {ui.big(top['short'])} lượt trong {ui.mlabel(end)} so với cùng tháng 2019",
-                       f"Khoảng cách thiếu hụt = lượt khách cùng tháng 2019 − lượt khách {ui.mlabel(end)} (8 thị trường thiếu nhiều nhất)")
+        _set_title(fig, f"Mức thiếu hụt lượt khách ở các thị trường chưa phục hồi ({ui.mlabel(end)} so với 2019)")
+        ui.chart_title("", f"{top['market']} còn thiếu {ui.big(top['short'])} lượt trong {ui.mlabel(end)} — lớn nhất trong 8 thị trường thiếu hụt nhiều nhất")
         ui.show(fig, key="qa1")
         recent = m.loc[(m["market"] == top["market"]) & (m["date"] > end - pd.DateOffset(months=6)), ["date", "recovery_index"]].dropna()
         trail = " → ".join(f"{ui.mlabel(r.date)}: {ui.n0(r.recovery_index)}" for r in recent.itertuples())
@@ -450,8 +463,8 @@ def _explorer_qa(D):
         fig.add_hline(y=100, line_dash="dot", line_color=INK, annotation_text="Trung bình năm = 100", annotation_position="top left")
         ui.style_fig(fig, 380, legend=False)
         fig.update_yaxes(title="Chỉ số mùa vụ (trung bình T1–T11 = 100)")
-        ui.chart_title(f"{mk}: lượng khách tập trung cao nhất vào {', '.join(top3)} và thấp nhất vào {low}",
-                       "Chỉ số mùa vụ = trung vị giai đoạn 2023–2025 của lượt khách từng tháng ÷ bình quân tháng 1–11 cùng năm. Xanh: 3 tháng cao nhất · Cam: tháng thấp nhất.")
+        _set_title(fig, f"Đặc điểm mùa vụ của du lịch quốc tế: thị trường {mk} (2023–2025)")
+        ui.chart_title("", f"Đông khách nhất vào {', '.join(top3)}, thấp nhất vào {low} · Xanh: 3 tháng cao nhất · Cam: tháng thấp nhất (trung vị 2023–2025 ÷ bình quân T1–T11)")
         ui.show(fig, key="qa2")
         ui.source("Bảng dữ liệu tổng hợp (chỉ tính các thị trường có đủ số liệu giai đoạn 2023–2025).")
         ui.card(f"<h4>Gợi ý từ dữ liệu</h4><p>Thị trường <b>{mk}</b> có lượng khách tập trung nhiều hơn vào các tháng cao điểm ({', '.join(top3)}) và thấp hơn vào {low}. "
@@ -472,8 +485,8 @@ def _explorer_qa(D):
         ui.style_fig(fig, 400, legend=False)
         fig.update_xaxes(title=f"Mức quan tâm tìm kiếm {lag} tháng trước (thang 0–100, tương đối)", showgrid=True, gridcolor=GRID)
         fig.update_yaxes(title="Lượt khách thực tế")
-        ui.chart_title(f"{mk}: mức độ quan tâm tìm kiếm {lag} tháng trước có tương quan thuận với lượt khách (r = {hs._vn(f'{pr:.2f}')})",
-                       f"Tương quan hạng Spearman ρ = {hs._vn(f'{sr:.2f}')} · {len(g)} tháng có đủ dữ liệu tìm kiếm và lượt khách")
+        _set_title(fig, f"Mối liên hệ giữa tìm kiếm trực tuyến (đi trước {lag} tháng) và lượt khách từ {mk}")
+        ui.chart_title("", f"Pearson r = {hs._vn(f'{pr:.2f}')} · Spearman ρ = {hs._vn(f'{sr:.2f}')} · {len(g)} tháng có đủ dữ liệu tìm kiếm và lượt khách")
         ui.show(fig, key="qa3")
         yoy = D["yoy"]
         yrow = yoy.loc[(yoy["market"] == mk) & (yoy["trend_period"] == f"interest_lead_{lag}m_yoy" if lag else yoy["trend_period"] == "interest_yoy")]
@@ -531,8 +544,8 @@ def page_race(D):
         sliders=[dict(active=0, x=0.18, y=-0.1, len=0.8, currentvalue=dict(prefix="Tháng: ", font=dict(size=13)), pad=dict(t=0, b=10),
                       steps=[dict(label=ui.mlabel(d), method="animate", args=[[d.strftime("%Y-%m")], dict(mode="immediate", frame=dict(duration=0, redraw=True), transition=dict(duration=0))]) for d in dates])])
     fig.add_shape(type="line", x0=100, x1=100, y0=0, y1=1, yref="paper", line=dict(color=INK, dash="dot", width=1.5))
-    ui.chart_title("Diễn biến chỉ số phục hồi theo từng tháng",
-                   "Cam: dưới 95 · Xám: quanh mốc 2019 (95–105) · Xanh: trên 105. Đường chấm dọc đánh dấu mốc năm 2019 = 100.")
+    _set_title(fig, f"Diễn biến phục hồi của các thị trường theo từng tháng (từ {start})")
+    ui.chart_title("", "Cam: dưới 95 · Xám: quanh mốc 2019 (95–105) · Xanh: trên 105. Đường chấm dọc đánh dấu mốc năm 2019 = 100.")
     ui.show(fig, key="race")
     ui.source("Bảng dữ liệu tổng hợp VNAT/NSO. Số liệu theo từng thị trường được công bố trở lại từ năm 2022.")
 
@@ -550,8 +563,8 @@ def page_race(D):
     ui.style_fig(fig2, 60 + 28 * max(len(crossed), 3), legend=False, margin=dict(l=10, r=20, t=10, b=30))
     fig2.update_yaxes(autorange="reversed", showgrid=True, gridcolor=GRID)
     fig2.update_xaxes(showgrid=False)
-    ui.chart_title("Thời điểm từng thị trường lần đầu đạt mốc 2019",
-                   f"Tháng đầu tiên ghi nhận chỉ số phục hồi ≥ 100 kể từ {ui.mlabel(piv.index[0])}"
+    _set_title(fig2, f"Thời điểm từng thị trường lần đầu đạt mốc năm 2019 (từ {ui.mlabel(piv.index[0])})")
+    ui.chart_title("", f"Tháng đầu tiên ghi nhận chỉ số phục hồi ≥ 100 kể từ {ui.mlabel(piv.index[0])}"
                    + (f" · Chưa đạt mốc 100: {', '.join(never)}" if never else ""))
     ui.show(fig2, key="race2")
     st.caption("Lưu ý: Việc lần đầu chạm mốc 100 không đồng nghĩa thị trường đã duy trì ổn định mức phục hồi đó trong các tháng tiếp theo.")
@@ -584,9 +597,9 @@ def page_season(D):
         ui.style_fig(fig, 80 + 24 * len(piv), legend=False, margin=dict(l=10, r=10, t=10, b=10))
         fig.update_yaxes(showgrid=False, tickfont=dict(size=11))
         fig.update_xaxes(side="top")
-        ui.chart_title(f"Lượng khách thay đổi như thế nào giữa các tháng? (Năm {y})",
-                       "Mỗi ô thể hiện chỉ số phục hồi của một thị trường trong một tháng, so với cùng tháng năm 2019 (= 100). "
-                       "Cam: dưới mốc 2019 · Xám: quanh 100 · Xanh: vượt 2019 · Ô trắng: thiếu số liệu.")
+        _set_title(fig, f"Mức phục hồi theo từng tháng so với năm 2019 (Năm {y})", top_margin=74)
+        ui.chart_title("", "Mỗi ô là chỉ số phục hồi của một thị trường trong một tháng (= 100 là bằng cùng tháng 2019). "
+                       "Cam: dưới 100 · Xám: quanh 100 · Xanh: vượt 100 · Ô trắng: thiếu số liệu.")
         ui.show(fig, key="se_heat")
         ui.source("Bảng dữ liệu tổng hợp VNAT/NSO. Các hàng sắp xếp theo tổng lượt khách trong năm; thang màu giới hạn ở 40–160 để tránh ngoại lệ làm mờ xu hướng chung (số trong ô là giá trị thực tế).")
     with t2:
@@ -602,8 +615,8 @@ def page_season(D):
         ui.style_fig(fig, 360)
         fig.update_yaxes(title="Lượng mưa trung vị (mm/tháng)")
         wet = {c: ", ".join(f"T{k}" for k in rain[c].sort_values(ascending=False).head(3).index.sort_values()) for c in rain.columns}
-        ui.chart_title("Tháng nào thường có lượng mưa cao tại hai điểm đến?",
-                       f"Trung vị lượng mưa từng tháng giai đoạn 2017–2025 · Cao điểm mưa: Đà Nẵng ({wet.get('Đà Nẵng', '–')}), Nha Trang ({wet.get('Nha Trang', '–')})")
+        _set_title(fig, "Phân bố lượng mưa trung vị theo tháng tại Đà Nẵng và Nha Trang (2017–2025)")
+        ui.chart_title("", f"Cao điểm mưa: Đà Nẵng ({wet.get('Đà Nẵng', '–')}), Nha Trang ({wet.get('Nha Trang', '–')})")
         ui.show(fig, key="se_rain")
         fig = go.Figure()
         for dest in sun.columns:
@@ -612,7 +625,8 @@ def page_season(D):
                                      hovertemplate=f"<b>{dest}</b> %{{x}}: %{{y:.0f}} giờ<extra></extra>"))
         ui.style_fig(fig, 300)
         fig.update_yaxes(title="Số giờ nắng trung vị (giờ/tháng)")
-        ui.chart_title("Số giờ nắng trung bình theo tháng", "Trung vị số giờ nắng mỗi tháng tại Đà Nẵng và Nha Trang, giai đoạn 2017–2025")
+        _set_title(fig, "Xu hướng thời tiết giai đoạn 2017–2025: số giờ nắng trung vị theo tháng")
+        ui.chart_title("", "Số giờ nắng trung vị mỗi tháng tại Đà Nẵng và Nha Trang, giai đoạn 2017–2025")
         ui.show(fig, key="se_sun")
         ui.source("Open-Meteo Historical Weather.")
         ui.card("<p><b>Lưu ý về phạm vi dữ liệu:</b> Lượt khách quốc tế trong bảng dữ liệu là số liệu <b>toàn quốc</b>, trong khi dữ liệu thời tiết chỉ đo tại Đà Nẵng và Nha Trang. "
@@ -642,8 +656,8 @@ def page_segments(D):
         ui.style_fig(fig, 520)
         fig.update_xaxes(title="Khoảng cách địa lý đến Việt Nam (km)", showgrid=True, gridcolor=GRID)
         fig.update_yaxes(title="Biên độ mùa vụ (điểm chỉ số)")
-        ui.chart_title("Khoảng cách địa lý có liên hệ với mức độ biến động mùa vụ",
-                       "Mỗi điểm đại diện cho một thị trường. Kích thước thể hiện lượng khách lũy kế từ đầu năm, màu sắc thể hiện nhóm phân khúc (K-means, k = 2).")
+        _set_title(fig, "Phân nhóm thị trường theo khoảng cách địa lý và biên độ mùa vụ")
+        ui.chart_title("", "Mỗi điểm đại diện cho một thị trường. Kích thước thể hiện lượng khách lũy kế từ đầu năm, màu sắc thể hiện nhóm phân khúc (K-means, k = 2).")
         ui.show(fig, key="sg_scatter")
         ui.source("Bảng dữ liệu tổng hợp VNAT/NSO; đặc trưng thị trường tính từ chuỗi phục hồi và mùa vụ.")
     with c2:

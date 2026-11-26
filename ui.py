@@ -170,8 +170,34 @@ def chapter(no: int, title: str, sub: str = ""):
 
 
 def chart_title(headline: str, sub: str = ""):
-    st.markdown(f"<div class='chart-title'>{headline}</div>" + (f"<div class='chart-sub'>{sub}</div>" if sub else ""),
-                unsafe_allow_html=True)
+    head_html = f"<div class='chart-title'>{headline}</div>" if headline else ""
+    sub_html = f"<div class='chart-sub'>{sub}</div>" if sub else ""
+    if head_html or sub_html:
+        st.markdown(head_html + sub_html, unsafe_allow_html=True)
+
+
+def set_title(fig, title: str, top_margin: int | None = None):
+    """Gắn tiêu đề đồng nhất ngay trong figure Plotly và đảm bảo đủ lề trên."""
+    cur_m = fig.layout.margin.to_plotly_json() if fig.layout.margin else {}
+    min_top = top_margin if top_margin is not None else 56
+    if (cur_m.get("t") or 0) < min_top:
+        cur_m["t"] = min_top
+    fig.update_layout(
+        margin=cur_m,
+        title=dict(
+            text=f"<b>{title}</b>",
+            x=0.01,
+            xanchor="left",
+            y=0.97,
+            yanchor="top",
+            font=dict(
+                family="Be Vietnam Pro, Segoe UI, Roboto, Arial, sans-serif",
+                size=16,
+                color=INK,
+            ),
+        ),
+    )
+    return fig
 
 
 def source(text: str):

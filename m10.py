@@ -196,6 +196,13 @@ def _plan(D):
 
 
 # ---------------------------------------------------------------- 2. ghi kết quả
+def _set_title(fig, title: str, top_margin: int | None = None):
+    if hasattr(ui, "set_title"):
+        return ui.set_title(fig, title, top_margin)
+    fig.update_layout(title=dict(text=f"<b>{title}</b>", x=0.01, xanchor="left"), margin=dict(t=top_margin or 56))
+    return fig
+
+
 def _five_stimulus(D, kind: str):
     m = D["master"]
     end = dl.latest_date(m)
@@ -207,13 +214,13 @@ def _five_stimulus(D, kind: str):
                                marker_color=[ui.STATUS_COLOR[x] for x in g["status"]]))
         ui.style_fig(fig, 480, legend=False)
         fig.update_yaxes(showgrid=False)
-        ui.chart_title("Ai tăng, ai thiếu so với 2019?", f"{ui.mlabel(end)} so với cùng tháng 2019")
+        _set_title(fig, f"Chênh lệch lượt khách theo thị trường so với năm 2019 ({ui.mlabel(end)})")
     else:
         ts = dl.total_index_series(m).set_index("date")["index"].loc["2022-01-01":]
         fig = go.Figure(go.Scatter(x=ts.index, y=ts.values, mode="lines+markers", line=dict(color=P["Pea Flower"], width=3)))
         fig.add_hline(y=100, line_dash="dot", line_color=INK)
         ui.style_fig(fig, 400, legend=False)
-        ui.chart_title("Chỉ số gộp so với 2019", "2019 = 100")
+        _set_title(fig, f"Diễn biến phục hồi lượng khách quốc tế giai đoạn 2022–{ui.mlabel(ts.index[-1])}")
     return fig
 
 
@@ -310,8 +317,8 @@ def _analysis():
         ui.style_fig(fig, 340, legend=False)
         fig.update_yaxes(title="% người hoàn thành", range=[0, 115])
         low = k["hoan_thanh"].idxmin()
-        ui.chart_title(f"Nhiệm vụ {low} có tỷ lệ hoàn thành thấp nhất ({ui.pct(k.loc[low, 'hoan_thanh'], signed=False)})",
-                       f"{n} người thử · xanh ≥ 80% · cam &lt; 80%")
+        _set_title(fig, "Tỷ lệ hoàn thành các nhiệm vụ kiểm thử trải nghiệm người dùng")
+        ui.chart_title("", f"Nhiệm vụ {low} có tỷ lệ hoàn thành thấp nhất ({ui.pct(k.loc[low, 'hoan_thanh'], signed=False)}) · {n} người thử · xanh ≥ 80% · cam &lt; 80%")
         ui.show(fig, key="an_task")
         if n < 10:
             st.caption(f"⚠️ Chỉ có {n} người thử: nên đọc như dấu hiệu định tính, không suy diễn thống kê.")
