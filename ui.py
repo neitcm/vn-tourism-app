@@ -179,6 +179,13 @@ div[data-testid="stMetric"] {{ background:#fff; border:1px solid {SAND_DARK}; bo
 .js-plotly-plot .plotly .modebar-btn svg {{
   width: 16px !important;
   height: 16px !important;
+  fill: #29434A !important;
+  opacity: 1 !important;
+}}
+.js-plotly-plot .plotly .modebar-btn svg path {{
+  fill: #29434A !important;
+  stroke: #29434A !important;
+  opacity: 1 !important;
 }}
 .vt-chart-shell {{
   position: relative;
