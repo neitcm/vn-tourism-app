@@ -436,11 +436,13 @@ def _explorer_free(D):
 def _explorer_qa(D):
     m, colors = D["master"], D["colors"]
     end = dl.latest_date(m)
-    q = st.radio("Chọn câu hỏi cần phân tích", [
+    questions = [
         "Câu 1: Nên ưu tiên kéo khách trở lại từ thị trường nào?",
         "Câu 2: Chạy chiến dịch vào tháng nào cho một thị trường?",
-        "Câu 3: Tìm kiếm trực tuyến có báo trước lượt khách không?"], key="qa_q", horizontal=True)
-    number = int(q[0])
+        "Câu 3: Tìm kiếm trực tuyến có báo trước lượt khách không?",
+    ]
+    q = st.radio("Chọn câu hỏi cần phân tích", questions, key="qa_q", horizontal=True)
+    number = questions.index(q) + 1
     st.markdown(f"### Câu {number:02d} · {['Tìm thị trường ưu tiên', 'Đọc mùa vụ', 'Đọc mối liên hệ'][number - 1]}")
     prompts = [
         "Quan sát mức thiếu hụt lượt khách ở tháng mới nhất. Thị trường nào có mức thiếu hụt lớn nhất so với cùng tháng năm 2019?",
@@ -499,7 +501,7 @@ def _explorer_qa(D):
             st.session_state[started] = time.time()
             st.rerun()
 
-    if q.startswith("1"):
+    if number == 1:
         snap = dl.market_snapshot(m, end).dropna(subset=["recovery_index"])
         snap["short"] = snap["baseline_2019"] - snap["arrivals"]
         ranked = snap.loc[snap["short"] > 0].sort_values("short", ascending=False)
@@ -527,7 +529,7 @@ def _explorer_qa(D):
         answer_widget(key, token, choices, answer,
                       f"Trong {ui.mlabel(end)}, {top['market']} thiếu {ui.n0(top['short'])} lượt so với cùng tháng năm 2019, lớn nhất trong các thị trường chưa phục hồi. Cột dài nhất biểu thị mức thiếu hụt cao nhất.")
 
-    elif q.startswith("2"):
+    elif number == 2:
         S = D["season"]
         mk = st.selectbox("Chọn thị trường", S.index.tolist(), index=S.index.tolist().index("Nhật Bản") if "Nhật Bản" in S.index else 0)
         s = S.loc[mk]
