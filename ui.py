@@ -296,6 +296,7 @@ _ENHANCE_HTML = """
     boxZoom: "Khoanh vùng phóng to",
     reset: "Khôi phục ban đầu",
     autoscale: "Xem toàn bộ biểu đồ",
+    fullscreenExit: "Thu hẹp vùng hiển thị",
     download: "Lưu ảnh biểu đồ"
   };
 
@@ -321,7 +322,19 @@ _ENHANCE_HTML = """
     const btns = Array.from(mb.querySelectorAll(".modebar-btn"));
     btns.forEach(b => {
       const k = classifyBtn(b);
-      if (TOOLTIPS[k]) {
+      if (k === "autoscale") {
+        const isFullscreen = doc.fullscreenElement === gd.closest('[data-testid="stPlotlyChart"]');
+        const label = isFullscreen ? TOOLTIPS.fullscreenExit : TOOLTIPS.autoscale;
+        b.setAttribute("data-title", label);
+        b.setAttribute("aria-label", label);
+        const svg = b.querySelector("svg");
+        if (svg) {
+          svg.setAttribute("viewBox", "0 0 24 24");
+          svg.innerHTML = isFullscreen
+            ? '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>'
+            : '<path d="M5 5h5v2H7v3H5V5zm9 0h5v5h-2V7h-3V5zM5 14h2v3h3v2H5v-5zm12 3v-3h2v5h-5v-2h3z"/>';
+        }
+      } else if (TOOLTIPS[k]) {
         b.setAttribute("data-title", TOOLTIPS[k]);
         b.setAttribute("aria-label", TOOLTIPS[k]);
       }
@@ -493,13 +506,16 @@ _ENHANCE_HTML = """
           const btn = event.target.closest && event.target.closest(".modebar-btn");
           if (!btn || classifyBtn(btn) !== "autoscale") return;
           const target = host.requestFullscreen ? host : null;
-          if (target && !doc.fullscreenElement) {
+          if (target && doc.fullscreenElement === host) {
+            doc.exitFullscreen();
+          } else if (target && !doc.fullscreenElement) {
             target.requestFullscreen().then(() => {
               setTimeout(() => win.Plotly && win.Plotly.Plots.resize(gd), 80);
             }).catch(() => {});
           }
         }, true);
         doc.addEventListener("fullscreenchange", () => {
+          styleModebar(gd);
           if (doc.fullscreenElement === host) {
             host.style.background = "#FBF8F1";
             host.style.width = "100vw";
