@@ -485,6 +485,51 @@ _ENHANCE_HTML = """
       captureFull();
       sync();
 
+      // The "Xem toàn bộ biểu đồ" modebar control also expands the chart
+      // to the browser's fullscreen area, while keeping Plotly's autoscale.
+      if (!host.dataset.vtFullscreenBound) {
+        host.dataset.vtFullscreenBound = "1";
+        host.addEventListener("click", (event) => {
+          const btn = event.target.closest && event.target.closest(".modebar-btn");
+          if (!btn || classifyBtn(btn) !== "autoscale") return;
+          const target = host.requestFullscreen ? host : null;
+          if (target && !doc.fullscreenElement) {
+            target.requestFullscreen().then(() => {
+              setTimeout(() => win.Plotly && win.Plotly.Plots.resize(gd), 80);
+            }).catch(() => {});
+          }
+        }, true);
+        doc.addEventListener("fullscreenchange", () => {
+          if (doc.fullscreenElement === host) {
+            host.style.background = "#FBF8F1";
+            host.style.width = "100vw";
+            host.style.height = "100vh";
+            host.style.padding = "12px";
+            host.style.boxSizing = "border-box";
+            host.style.overflow = "auto";
+            const chart = host.querySelector(".js-plotly-plot");
+            if (chart) {
+              chart.style.height = "calc(100vh - 24px)";
+              chart.style.width = "100%";
+              win.Plotly && win.Plotly.Plots.resize(gd);
+            }
+          } else {
+            host.style.removeProperty("background");
+            host.style.removeProperty("width");
+            host.style.removeProperty("height");
+            host.style.removeProperty("padding");
+            host.style.removeProperty("box-sizing");
+            host.style.removeProperty("overflow");
+            const chart = host.querySelector(".js-plotly-plot");
+            if (chart) {
+              chart.style.removeProperty("height");
+              chart.style.removeProperty("width");
+              win.Plotly && win.Plotly.Plots.resize(gd);
+            }
+          }
+        });
+      }
+
       gd.on("plotly_relayout", () => { styleModebar(gd); sync(); });
       gd.on("plotly_afterplot", () => { styleModebar(gd); captureFull(); sync(); });
 
