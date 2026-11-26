@@ -119,11 +119,18 @@ TASKS = [
 
 # ---------------------------------------------------------------- trang chính
 def page(D):
-    ui.page_header(
-        "🧪",
-        "Đánh giá và cải tiến",
-        "Lập kế hoạch kiểm thử, ghi nhận kết quả thực tế từ người tham gia, phân tích dữ liệu và theo dõi nhật ký cải tiến.",
-    )
+    if hasattr(ui, "page_header"):
+        ui.page_header(
+            "🧪",
+            "Đánh giá và cải tiến",
+            "Lập kế hoạch kiểm thử, ghi nhận kết quả thực tế từ người tham gia, phân tích dữ liệu và theo dõi nhật ký cải tiến.",
+        )
+    else:
+        st.markdown(
+            f"<h2 style='margin:.2rem 0 .15rem;font-weight:800'>🧪 Đánh giá và cải tiến</h2>"
+            f"<p style='color:{ui.MUTED};margin:0 0 .65rem;font-size:1rem'>Lập kế hoạch kiểm thử, ghi nhận kết quả thực tế từ người tham gia, phân tích dữ liệu và theo dõi nhật ký cải tiến.</p>",
+            unsafe_allow_html=True,
+        )
     _progress()
     t1, t2, t3, t4 = st.tabs(["📋 Kế hoạch kiểm thử", "📝 Ghi nhận kết quả", "📊 Phân tích kết quả", "🛠️ Nhật ký cải tiến"])
     with t1:

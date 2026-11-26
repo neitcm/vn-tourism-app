@@ -29,7 +29,28 @@ VIETNAM = (21.0, 105.8)  # Hà Nội, điểm đại diện cho Việt Nam (như
 
 
 def _header(icon, title, text, guide=""):
-    ui.page_header(icon, title, text, guide)
+    if hasattr(ui, "page_header"):
+        ui.page_header(icon, title, text, guide)
+        return
+    st.markdown(
+        f"<h2 style='margin:.2rem 0 .15rem;font-weight:800'>{icon} {title}</h2>"
+        f"<p style='color:{MUTED};margin:0 0 .65rem;font-size:1rem'>{text}</p>",
+        unsafe_allow_html=True,
+    )
+    if guide:
+        st.info(guide)
+
+
+def _guide_box(title: str, body_html: str):
+    if hasattr(ui, "guide_box"):
+        ui.guide_box(title, body_html)
+    else:
+        st.markdown(
+            f"<div style='background:#fff;border:1px solid #F1EADB;border-left:4px solid #2F7D8C;"
+            f"border-radius:12px;padding:.75rem 1rem;margin:.2rem 0 .85rem;font-size:.88rem;color:{INK}'>"
+            f"<div style='font-weight:700;margin-bottom:.25rem;color:#25533F'>{title}</div>{body_html}</div>",
+            unsafe_allow_html=True,
+        )
 
 
 def _region_color(r: str) -> str:
@@ -236,7 +257,7 @@ def _treemap(D):
     )
     mode = c2.radio("Màu sắc thể hiện", ["Khu vực", "Chỉ số phục hồi"], horizontal=True, key="m7_tree_mode")
 
-    ui.guide_box(
+    _guide_box(
         "Cách đọc biểu đồ quy mô thị trường",
         "<ul style='margin:.2rem 0 0 1.1rem;padding:0'>"
         "<li>Diện tích ô càng lớn, lượng khách càng nhiều.</li>"

@@ -5,6 +5,7 @@ Chạy:  streamlit run app.py
 """
 from __future__ import annotations
 
+import importlib
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -15,6 +16,10 @@ import house_style as hs
 import m10
 import pages_m7_m8 as m78
 import ui
+if not hasattr(ui, "page_header") or not hasattr(ui, "guide_box"):
+    ui = importlib.reload(ui)
+    m78 = importlib.reload(m78)
+    m10 = importlib.reload(m10)
 from ui import INK, MUTED, GRID, P
 
 st.set_page_config(page_title="Coming Back · Du lịch Việt Nam", page_icon="🏝️", layout="wide", initial_sidebar_state="expanded")
@@ -42,7 +47,28 @@ def get_data():
 
 
 def page_header(icon, title, text, guide=""):
-    ui.page_header(icon, title, text, guide)
+    if hasattr(ui, "page_header"):
+        ui.page_header(icon, title, text, guide)
+        return
+    st.markdown(
+        f"<h2 style='margin:.2rem 0 .15rem;font-weight:800'>{icon} {title}</h2>"
+        f"<p style='color:{MUTED};margin:0 0 .65rem;font-size:1rem'>{text}</p>",
+        unsafe_allow_html=True,
+    )
+    if guide:
+        st.info(guide)
+
+
+def _guide_box(title: str, body_html: str):
+    if hasattr(ui, "guide_box"):
+        ui.guide_box(title, body_html)
+    else:
+        st.markdown(
+            f"<div style='background:#fff;border:1px solid #F1EADB;border-left:4px solid #2F7D8C;"
+            f"border-radius:12px;padding:.75rem 1rem;margin:.2rem 0 .85rem;font-size:.88rem;color:{INK}'>"
+            f"<div style='font-weight:700;margin-bottom:.25rem;color:#25533F'>{title}</div>{body_html}</div>",
+            unsafe_allow_html=True,
+        )
 
 
 def add_gap_band(fig, start="2020-04-01", end="2021-12-31", text="Không có số liệu theo thị trường"):
@@ -261,7 +287,7 @@ def _explorer_free(D):
         smooth = c5.toggle("Làm mượt đường biểu diễn", value=False, help="Tính trung bình trượt 3 tháng để giảm dao động ngắn hạn theo mùa vụ.")
         show_base = c6.toggle("Hiện đường mốc năm 2019", value=True, help="Hiển thị đường tham chiếu tại mức 100 khi đang xem Chỉ số phục hồi.")
 
-    ui.guide_box(
+    _guide_box(
         "Cách đọc 3 chỉ số và thang phục hồi",
         "<ul style='margin:.2rem 0 .45rem 1.1rem;padding:0'>"
         "<li><b>Chỉ số phục hồi:</b> So sánh lượng khách với cùng tháng năm 2019. Mốc 100 tương đương năm 2019.</li>"
