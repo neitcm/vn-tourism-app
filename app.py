@@ -5,12 +5,13 @@ Chạy:  streamlit run app.py
 """
 from __future__ import annotations
 
+import hashlib
 import importlib
+import time
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-
 import data_layer as dl
 import house_style as hs
 import m10
@@ -438,54 +439,127 @@ def _explorer_qa(D):
     q = st.radio("Chọn câu hỏi cần phân tích", [
         "1️⃣ Nên ưu tiên kéo khách trở lại từ thị trường nào?",
         "2️⃣ Chạy chiến dịch vào tháng nào cho một thị trường?",
-        "3️⃣ Tìm kiếm trực tuyến có báo trước lượt khách không?"], key="qa_q")
+        "3️⃣ Tìm kiếm trực tuyến có báo trước lượt khách không?"], key="qa_q", horizontal=True)
+    number = int(q[0])
+    st.markdown(f"### Câu {number:02d} · {['Tìm thị trường ưu tiên', 'Đọc mùa vụ', 'Đọc mối liên hệ'][number - 1]}")
+    prompts = [
+        "Quan sát mức thiếu hụt lượt khách ở tháng mới nhất. Thị trường nào có mức thiếu hụt lớn nhất so với cùng tháng năm 2019?",
+        "Dựa vào biểu đồ mùa vụ của thị trường đang chọn, tháng nào có chỉ số mùa vụ cao nhất?",
+        "Quan sát biểu đồ phân tán: nhận định nào phù hợp nhất về mối liên hệ giữa tìm kiếm trực tuyến đi trước và lượt khách?",
+    ]
+    st.info(f"{prompts[number - 1]}\n\nHãy tự đọc biểu đồ trước khi chọn và xác nhận đáp án.")
+    if "qa_quiz_results" not in st.session_state:
+        st.session_state.qa_quiz_results = {}
+    results = st.session_state.qa_quiz_results
+    attempts = st.session_state.setdefault("qa_quiz_attempts", {})
+
+    def options(answer, distractors, seed):
+        values = [answer] + [x for x in distractors if x != answer]
+        values = values[:4]
+        if len(values) > 1:
+            offset = hashlib.sha256(str(seed).encode()).digest()[0] % len(values)
+            values = values[offset:] + values[:offset]
+        return values
+
+    def identity(question, filters):
+        key = f"q{question}|{filters}"
+        return key, hashlib.sha256(key.encode()).hexdigest()[:12]
+
+    def answer_widget(key, token, choices, answer, explanation, answer_title="Đáp án đúng"):
+        st.session_state.setdefault("qa_current_keys", {})[f"q{number}"] = key
+        result = results.get(key)
+        started = f"qa_started_{token}"
+        st.session_state.setdefault(started, time.time())
+        st.markdown("#### 🧠 Chọn đáp án của bạn")
+        selected = st.radio("Phương án", choices, index=None, key=f"qa_choice_{token}",
+                             label_visibility="collapsed", disabled=result is not None)
+        if result is None:
+            if st.button("✅ Xác nhận đáp án", key=f"qa_submit_{token}",
+                         disabled=not selected, type="primary"):
+                attempts[key] = attempts.get(key, 0) + 1
+                results[key] = {
+                    "question": f"Câu {number}", "selected": selected, "answer": answer,
+                    "correct": selected == answer,
+                    "seconds": round(max(0, time.time() - st.session_state[started]), 1),
+                    "attempts": attempts[key],
+                }
+                st.rerun()
+            st.caption("Chọn một phương án và xác nhận để xem kết quả cùng lời giải.")
+            return
+        if result["correct"]:
+            st.success("🎉 Chính xác! Bạn đã đọc đúng insight từ biểu đồ.")
+        else:
+            st.error("Chưa chính xác, hãy cùng xem lại dữ liệu nhé!")
+        st.markdown(f"**{answer_title}: {answer}**")
+        st.write(explanation)
+        st.caption(f"Thời gian trả lời: {result['seconds']:.1f} giây · Số lần xác nhận: {result['attempts']}")
+        if st.button("↻ Làm lại câu hỏi", key=f"qa_retry_{token}"):
+            results.pop(key, None)
+            st.session_state.pop(f"qa_choice_{token}", None)
+            st.session_state[started] = time.time()
+            st.rerun()
+
     if q.startswith("1"):
         snap = dl.market_snapshot(m, end).dropna(subset=["recovery_index"])
         snap["short"] = snap["baseline_2019"] - snap["arrivals"]
-        short = snap.loc[snap["short"] > 0].sort_values("short", ascending=False).head(8).iloc[::-1]
+        ranked = snap.loc[snap["short"] > 0].sort_values("short", ascending=False)
+        if ranked.empty:
+            st.info("Không có thị trường thiếu hụt lượt khách ở tháng mới nhất để tạo câu hỏi này.")
+            return
+        shown = ranked.head(8).iloc[::-1]
         fig = go.Figure(go.Bar(
-            x=short["short"], y=[dl.label(k) for k in short["market"]], orientation="h", marker_color=P["Poppy"],
-            text=[ui.big(v) for v in short["short"]], textposition="outside", cliponaxis=False,
-            customdata=np.stack([short["recovery_index"], short["arrivals"]], 1),
+            x=shown["short"], y=[dl.label(k) for k in shown["market"]], orientation="h", marker_color=P["Poppy"],
+            text=[ui.big(v) for v in shown["short"]], textposition="outside", cliponaxis=False,
+            customdata=np.stack([shown["recovery_index"], shown["arrivals"]], 1),
             hovertemplate="<b>%{y}</b><br>Còn thiếu: <b>%{x:,.0f} lượt</b><br>Lượt khách tháng này: %{customdata[1]:,.0f} lượt<br>Chỉ số phục hồi: <b>%{customdata[0]:,.1f}</b><extra></extra>"))
         ui.style_fig(fig, 400, legend=False, margin=dict(l=10, r=70, t=10, b=10))
         fig.update_yaxes(showgrid=False, title_text="Thị trường")
-        fig.update_xaxes(visible=True, showgrid=True, gridcolor=GRID,
-                         title_text="Số lượt khách còn thiếu so với cùng tháng 2019 (lượt)",
-                         tickformat=",.0f", range=[0, float(short["short"].max()) * 1.18 if len(short) else 100])
-        top = short.iloc[-1]
+        fig.update_xaxes(showgrid=True, gridcolor=GRID, title_text="Số lượt khách còn thiếu so với cùng tháng 2019 (lượt)",
+                         tickformat=",.0f", range=[0, float(shown["short"].max()) * 1.18])
         _set_title(fig, f"Mức thiếu hụt lượt khách ở các thị trường chưa phục hồi ({ui.mlabel(end)} so với 2019)")
-        ui.chart_title("", f"{top['market']} còn thiếu {ui.big(top['short'])} lượt trong {ui.mlabel(end)} — lớn nhất trong 8 thị trường thiếu hụt nhiều nhất")
+        ui.chart_title("", "So sánh chiều dài các cột để tìm mức thiếu hụt lớn nhất.")
         ui.show(fig, key="qa1")
-        recent = m.loc[(m["market"] == top["market"]) & (m["date"] > end - pd.DateOffset(months=6)), ["date", "recovery_index"]].dropna()
-        trail = " → ".join(f"{ui.mlabel(r.date)}: {ui.n0(r.recovery_index)}" for r in recent.itertuples())
-        ui.card(f"<h4>Gợi ý từ dữ liệu</h4><p>Chỉ số phục hồi 6 tháng gần nhất của <b>{top['market']}</b>: {trail}.</p>"
-                "<p>Nếu chỉ số tiếp tục duy trì dưới mốc 100 hoặc có xu hướng đi xuống, cần rà soát các rào cản về đường bay, thị thực hoặc nhu cầu thị trường trước khi mở rộng ngân sách quảng bá. Đây là gợi ý để kiểm chứng, không phải kết luận nhân quả.</p>", "sun")
+        top = ranked.iloc[0]
+        raw = options(top["market"], ranked["market"].iloc[1:4].tolist(), f"q1|{end}")
+        choices = [f"{chr(65+i)}. {dl.label(mk)}" for i, mk in enumerate(raw)]
+        answer = next(x for x in choices if x.split(". ", 1)[1] == dl.label(top["market"]))
+        key, token = identity(1, ui.mlabel(end))
+        answer_widget(key, token, choices, answer,
+                      f"Trong {ui.mlabel(end)}, {top['market']} thiếu {ui.n0(top['short'])} lượt so với cùng tháng năm 2019, lớn nhất trong các thị trường chưa phục hồi. Cột dài nhất biểu thị mức thiếu hụt cao nhất.")
+
     elif q.startswith("2"):
         S = D["season"]
         mk = st.selectbox("Chọn thị trường", S.index.tolist(), index=S.index.tolist().index("Nhật Bản") if "Nhật Bản" in S.index else 0)
         s = S.loc[mk]
-        top3 = s.sort_values(ascending=False).head(3).index.tolist()
-        low = s.idxmin()
-        cols = [P["Pea Flower"] if k in top3 else ("#D9DCDD" if k != low else P["Poppy"]) for k in s.index]
-        fig = go.Figure(go.Bar(x=s.index, y=s.values, marker_color=cols, text=[ui.n0(v) for v in s.values], textposition="outside",
+        fig = go.Figure(go.Bar(x=s.index, y=s.values, marker_color=P["Blue Berry"], text=[ui.n0(v) for v in s.values], textposition="outside",
                                hovertemplate="Tháng: <b>%{x}</b><br>Chỉ số mùa vụ: <b>%{y:,.1f}</b> (trung bình T1–T11 = 100)<extra></extra>"))
         fig.add_hline(y=100, line_dash="dot", line_color=INK, annotation_text="Trung bình năm = 100", annotation_position="top left")
         ui.style_fig(fig, 400, legend=False)
         fig.update_xaxes(title_text="Tháng trong năm")
         fig.update_yaxes(title_text="Chỉ số mùa vụ (trung bình T1–T11 = 100)", tickformat=",.0f", range=[0, float(s.max()) * 1.16])
         _set_title(fig, f"Đặc điểm mùa vụ của du lịch quốc tế: thị trường {mk} (2023–2025)")
-        ui.chart_title("", f"Đông khách nhất vào {', '.join(top3)}, thấp nhất vào {low} · Xanh: 3 tháng cao nhất · Cam: tháng thấp nhất (trung vị 2023–2025 ÷ bình quân T1–T11)")
+        ui.chart_title("", "So sánh chiều cao các cột với đường tham chiếu 100.")
         ui.show(fig, key="qa2")
         ui.source("Bảng dữ liệu tổng hợp (chỉ tính các thị trường có đủ số liệu giai đoạn 2023–2025).")
-        ui.card(f"<h4>Gợi ý từ dữ liệu</h4><p>Thị trường <b>{mk}</b> có lượng khách tập trung nhiều hơn vào các tháng cao điểm ({', '.join(top3)}) và thấp hơn vào {low}. "
-                f"Nếu muốn thử nghiệm chiến dịch kích cầu, có thể cân nhắc giai đoạn ngay trước mùa cao điểm ({top3[0]}) hoặc những tháng có lượng khách thấp hơn ({low}) để đánh giá mức độ phản hồi.</p>", "sea")
+        month = s.idxmax()
+        distractors = [x for x in s.sort_values(ascending=False).index if x != month][:3]
+        raw = options(month, distractors, f"q2|{mk}|{s.to_dict()}")
+        choices = [f"{chr(65+i)}. {x}" for i, x in enumerate(raw)]
+        answer = next(x for x in choices if x.split(". ", 1)[1] == month)
+        key, token = identity(2, f"{mk}|{s.to_dict()}")
+        answer_widget(key, token, choices, answer,
+                      f"Với thị trường {mk}, {month} có chỉ số mùa vụ cao nhất ({ui.n1(s.loc[month])}), cao hơn đường tham chiếu 100. Chỉ số được tính từ dữ liệu 2023–2025 theo công thức mùa vụ hiện có.",
+                      "Tháng có chỉ số mùa vụ cao nhất")
+
     else:
         T = D["trends"]
         c1, c2 = st.columns(2)
         mk = c1.selectbox("Chọn thị trường", sorted(T["market"].unique()))
         lag = c2.slider("Độ trễ tìm kiếm đi trước (tháng)", 0, 3, 2)
         g = dl.lagged_trends(T, mk, lag)
+        if len(g) < 2:
+            st.info("Chưa đủ dữ liệu để so sánh tìm kiếm và lượt khách cho lựa chọn này.")
+            return
         pr, sr = dl.simple_corr(g["interest_lag"], g["arrivals"])
         coef = np.polyfit(g["interest_lag"], g["arrivals"], 1)
         xs = np.linspace(g["interest_lag"].min(), g["interest_lag"].max(), 20)
@@ -497,14 +571,39 @@ def _explorer_qa(D):
         fig.update_xaxes(title_text=f"Mức quan tâm tìm kiếm đi trước {lag} tháng (thang chuẩn hóa 0–100)", tickformat=",.0f", showgrid=True, gridcolor=GRID)
         fig.update_yaxes(title_text="Lượt khách quốc tế (lượt)", tickformat=",.0f")
         _set_title(fig, f"Mối liên hệ giữa tìm kiếm trực tuyến (đi trước {lag} tháng) và lượt khách từ {mk}")
-        ui.chart_title("", f"Pearson r = {hs._vn(f'{pr:.2f}')} · Spearman ρ = {hs._vn(f'{sr:.2f}')} · {len(g)} tháng có đủ dữ liệu tìm kiếm và lượt khách")
+        ui.chart_title("", "Quan sát hướng và độ phân tán của các điểm so với đường xu hướng.")
         ui.show(fig, key="qa3")
-        yoy = D["yoy"]
-        yrow = yoy.loc[(yoy["market"] == mk) & (yoy["trend_period"] == f"interest_lead_{lag}m_yoy" if lag else yoy["trend_period"] == "interest_yoy")]
-        extra = f" Khi đối chiếu theo biến động cùng kỳ năm trước (YoY), hệ số Spearman ρ đạt {hs._vn(f'{yrow["spearman_r"].iloc[0]:.2f}')}." if len(yrow) else ""
-        ui.card("<h4>Gợi ý từ dữ liệu · Lưu ý khi đọc tương quan</h4><p>Hệ số tương quan trong toàn giai đoạn bị nâng cao do cả mức tìm kiếm và lượt khách đều cùng giảm mạnh rồi phục hồi sau đại dịch."
-                f"{extra} Kết quả này nên được dùng như <b>tín hiệu tham khảo sớm</b> để theo dõi xu hướng nhu cầu, không chứng minh lượt tìm kiếm trực tiếp tạo ra lượng khách.</p>")
+        if sr >= 0.5:
+            answer_text, strength = "Mối liên hệ dương tương đối rõ (ρ ≥ 0,50)", "dương tương đối rõ"
+        elif sr >= 0.2:
+            answer_text, strength = "Mối liên hệ dương yếu đến vừa (0,20 ≤ ρ < 0,50)", "dương yếu đến vừa"
+        elif sr > -0.2:
+            answer_text, strength = "Chưa thấy mối liên hệ đơn điệu rõ (−0,20 ≤ ρ < 0,20)", "chưa rõ"
+        else:
+            answer_text, strength = "Mối liên hệ âm (ρ < −0,20)", "âm"
+        interpretations = ["Mối liên hệ dương tương đối rõ (ρ ≥ 0,50)",
+                           "Mối liên hệ dương yếu đến vừa (0,20 ≤ ρ < 0,50)",
+                           "Chưa thấy mối liên hệ đơn điệu rõ (−0,20 ≤ ρ < 0,20)",
+                           "Mối liên hệ âm (ρ < −0,20)"]
+        raw = options(answer_text, [x for x in interpretations if x != answer_text], f"q3|{mk}|{lag}")
+        choices = [f"{chr(65+i)}. {x}" for i, x in enumerate(raw)]
+        answer = next(x for x in choices if x.split(". ", 1)[1] == answer_text)
+        key, token = identity(3, f"{mk}|{lag}|{g['date'].min()}|{g['date'].max()}|{len(g)}")
+        answer_widget(key, token, choices, answer,
+                      f"Ở độ trễ {lag} tháng với {mk}, Spearman ρ = {hs._vn(f'{sr:.2f}')} và Pearson r = {hs._vn(f'{pr:.2f}')} trên {len(g)} tháng đủ dữ liệu. Kết quả thuộc nhóm {strength}. Đây là tương quan quan sát được, không chứng minh lượt tìm kiếm gây ra lượt khách.")
 
+    current_keys = st.session_state.get("qa_current_keys", {})
+    done = sum(current_keys.get(f"q{i}") in results for i in range(1, 4))
+    st.progress(done / 3, text=f"Đã xác nhận {done}/3 câu trong phiên này")
+    if results:
+        with st.expander("📋 Kết quả đã ghi nhận trong phiên này"):
+            frame = pd.DataFrame(results.values()).rename(columns={
+                "question": "Câu hỏi", "selected": "Đã chọn", "answer": "Đáp án đúng", "correct": "Trả lời đúng",
+                "seconds": "Thời gian (giây)", "attempts": "Số lần xác nhận",
+            })
+            ui.table(frame)
+            st.download_button("⬇️ Tải kết quả phiên (CSV)", frame.to_csv(index=False).encode("utf-8-sig"),
+                               "ket_qua_quiz.csv", "text/csv", key="qa_quiz_download")
 
 # ============================================================ TRANG 3 · DIỄN BIẾN PHỤC HỒI
 def page_race(D):
