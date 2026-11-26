@@ -240,8 +240,14 @@ def style_fig(fig, height: int = 420, legend: bool = True, margin=None):
         showlegend=legend,
         legend=dict(orientation="h", y=-0.18, x=0, font=dict(size=12), bgcolor="rgba(0,0,0,0)"),
     )
-    fig.update_xaxes(showgrid=False, linecolor=GRID, tickfont=dict(color=MUTED), zeroline=False)
-    fig.update_yaxes(gridcolor=GRID, linecolor="rgba(0,0,0,0)", tickfont=dict(color=MUTED), zeroline=False)
+    fig.update_xaxes(
+        showgrid=False, linecolor=GRID, tickfont=dict(color=MUTED, size=12),
+        title_font=dict(size=13, color=INK), automargin=True, zeroline=False,
+    )
+    fig.update_yaxes(
+        gridcolor=GRID, linecolor="rgba(0,0,0,0)", tickfont=dict(color=MUTED, size=12),
+        title_font=dict(size=13, color=INK), automargin=True, zeroline=False,
+    )
     return fig
 
 

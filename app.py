@@ -138,15 +138,16 @@ def page_story(D):
     fig = go.Figure(go.Bar(
         x=y19["sum"], y=[dl.label(k) for k in y19.index], orientation="h",
         marker_color=[colors[k] for k in y19.index], text=[ui.big(v) for v in y19["sum"]], textposition="outside",
-        hovertemplate="<b>%{y}</b><br>%{x:,.0f} lượt<extra></extra>", cliponaxis=False))
-    ui.style_fig(fig, 380, legend=False, margin=dict(l=10, r=70, t=10, b=10))
-    fig.update_xaxes(visible=False)
-    fig.update_yaxes(showgrid=False)
+        hovertemplate="<b>%{y}</b><br>Tổng lượt khách 2019: <b>%{x:,.0f} lượt</b><extra></extra>", cliponaxis=False))
+    ui.style_fig(fig, 400, legend=False, margin=dict(l=10, r=70, t=10, b=10))
+    fig.update_xaxes(visible=True, showgrid=True, gridcolor=GRID, title_text="Tổng lượt khách năm 2019 (lượt)",
+                     tickformat=",.0f", range=[0, float(y19["sum"].max()) * 1.18])
+    fig.update_yaxes(showgrid=False, title_text="Thị trường")
     full19 = m.loc[(m["year"] == 2019) & m["arrivals"].notna()].groupby("market")["arrivals"].agg(["sum", "count"])
     full19 = full19[full19["count"] == 12]["sum"].sort_values(ascending=False)
     share2 = 100 * full19.head(2).sum() / full19.sum()
     _set_title(fig, "Top thị trường theo tổng lượt khách năm 2019")
-    ui.chart_title("", f"{full19.index[0]} và {full19.index[1]} chiếm {ui.n0(share2)}% lượt khách năm 2019 · 10 thị trường lớn nhất trong {len(full19)} thị trường đủ dữ liệu 12 tháng")
+    ui.chart_title("", f"{full19.index[0]} và {full19.index[1]} chiếm {ui.n0(share2)}% lượt khách năm 2019 · nhãn cột rút gọn theo nghìn/triệu lượt (trên {len(full19)} thị trường đủ 12 tháng)")
     ui.show(fig, key="s1")
     ui.source("Cục Du lịch Quốc gia Việt Nam (VNAT) và Tổng cục Thống kê (NSO).")
 
@@ -158,11 +159,12 @@ def page_story(D):
     s2 = ts.reindex(rng)
     fig = go.Figure(go.Scatter(x=s2.index, y=s2.values, mode="lines+markers", connectgaps=False,
                                line=dict(color=P["Poppy"], width=3), marker=dict(size=7),
-                               hovertemplate="%{x|%m/%Y}: <b>%{y:.0f}</b><extra></extra>"))
+                               hovertemplate="Thời gian: %{x|%m/%Y}<br>Chỉ số phục hồi gộp: <b>%{y:,.1f}</b> (2019 = 100)<extra></extra>"))
     add_gap_band(fig)
     fig.add_hline(y=100, line_dash="dot", line_color=INK, annotation_text="Mốc 2019 = 100", annotation_position="top left")
-    ui.style_fig(fig, 340, legend=False)
-    fig.update_yaxes(title="Chỉ số phục hồi gộp (2019 = 100)")
+    ui.style_fig(fig, 360, legend=False)
+    fig.update_xaxes(title_text="Thời gian (tháng/năm)", tickformat="%m/%Y", dtick="M6", tickangle=-20)
+    fig.update_yaxes(title_text="Chỉ số phục hồi gộp (2019 = 100)", tickformat=",.0f")
     _set_title(fig, "Diễn biến phục hồi lượng khách quốc tế giai đoạn 2017–2022")
     ui.chart_title("", "Quý I/2020 giảm sâu từ mức 2019 trước khi dữ liệu bị gián đoạn đến 2022 (chỉ số gộp = tổng lượt khách ÷ tổng lượt khách cùng tháng 2019)")
     ui.show(fig, key="s2")
@@ -174,13 +176,14 @@ def page_story(D):
     s3 = ts.loc["2022-01-01":]
     cross = s3[s3 >= 100]
     fig = go.Figure(go.Scatter(x=s3.index, y=s3.values, mode="lines+markers", line=dict(color=P["Pea Flower"], width=3),
-                               marker=dict(size=6), hovertemplate="%{x|%m/%Y}: <b>%{y:.0f}</b><extra></extra>"))
+                               marker=dict(size=6), hovertemplate="Thời gian: %{x|%m/%Y}<br>Chỉ số phục hồi gộp: <b>%{y:,.1f}</b> (2019 = 100)<extra></extra>"))
     fig.add_hline(y=100, line_dash="dot", line_color=INK, annotation_text="Mốc 2019 = 100", annotation_position="bottom right")
     if len(cross):
         fig.add_annotation(x=cross.index[0], y=cross.iloc[0], text=f"Lần đầu ≥ 100: {ui.mlabel(cross.index[0])}",
                            ax=-60, ay=-55, showarrow=True, arrowhead=2, arrowcolor=INK, font=dict(size=12))
-    ui.style_fig(fig, 360, legend=False)
-    fig.update_yaxes(title="Chỉ số phục hồi gộp (2019 = 100)")
+    ui.style_fig(fig, 380, legend=False)
+    fig.update_xaxes(title_text="Thời gian (tháng/năm)", tickformat="%m/%Y", dtick="M6", tickangle=-20)
+    fig.update_yaxes(title_text="Chỉ số phục hồi gộp (2019 = 100)", tickformat=",.0f")
     note3 = (f"Tổng lượng khách lần đầu chạm mốc 2019 vào {ui.mlabel(cross.index[0])} và đạt {ui.n0(s3.iloc[-1])} vào {ui.mlabel(s3.index[-1])}"
              if len(cross) else "Tổng lượng khách vẫn chưa chạm mốc 2019")
     _set_title(fig, f"Diễn biến phục hồi của các thị trường giai đoạn 2022–{ui.mlabel(s3.index[-1])}")
@@ -192,17 +195,19 @@ def page_story(D):
     ui.chapter(4, "Thị trường nào đang đóng góp vào đà phục hồi?",
                f"Biểu đồ so sánh mức chênh lệch số lượt khách thực tế trong {ui.mlabel(end)} so với cùng tháng năm 2019. Màu xanh = vượt mốc 2019; màu cam = còn thấp hơn 2019.")
     g = has_base.reindex(has_base["gap"].abs().sort_values(ascending=False).index).head(16).sort_values("gap")
+    max_abs = float(g["gap"].abs().max()) * 1.24 if len(g) else 1.0
     fig = go.Figure(go.Bar(
         x=g["gap"], y=[dl.label(k) for k in g["market"]], orientation="h",
         marker_color=[ui.STATUS_COLOR[s] for s in g["status"]],
         text=[f"{'+' if v > 0 else ''}{ui.big(v)}" for v in g["gap"]], textposition="outside", cliponaxis=False,
         customdata=np.stack([g["arrivals"], g["baseline_2019"], g["recovery_index"]], 1),
-        hovertemplate="<b>%{y}</b><br>Tháng này: %{customdata[0]:,.0f}<br>Cùng tháng 2019: %{customdata[1]:,.0f}"
-                      "<br>Chỉ số: %{customdata[2]:.0f}<extra></extra>"))
-    ui.style_fig(fig, 520, legend=False, margin=dict(l=10, r=80, t=10, b=10))
+        hovertemplate="<b>%{y}</b><br>Chênh lệch: <b>%{x:+,.0f} lượt</b><br>Lượt khách tháng này: %{customdata[0]:,.0f} lượt<br>Cùng tháng 2019: %{customdata[1]:,.0f} lượt"
+                      "<br>Chỉ số phục hồi: <b>%{customdata[2]:,.1f}</b><extra></extra>"))
+    ui.style_fig(fig, 540, legend=False, margin=dict(l=10, r=70, t=10, b=10))
     fig.add_vline(x=0, line_color=INK, line_width=1)
-    fig.update_yaxes(showgrid=False)
-    fig.update_xaxes(showgrid=True, gridcolor=GRID, title="Chênh lệch lượt khách so với cùng tháng 2019")
+    fig.update_yaxes(showgrid=False, title_text="Thị trường")
+    fig.update_xaxes(showgrid=True, gridcolor=GRID, title_text="Chênh lệch lượt khách so với cùng tháng 2019 (lượt)",
+                     tickformat="+,.0f", range=[-max_abs, max_abs])
     top_pos = g.sort_values("gap", ascending=False).iloc[0]
     top_neg = g.sort_values("gap").iloc[0]
     _set_title(fig, f"Chênh lệch lượt khách theo thị trường so với cùng tháng năm 2019 ({ui.mlabel(end)})")
@@ -314,13 +319,13 @@ def _explorer_free(D):
         return
     d = m.loc[m["market"].isin(sel) & m["date"].between(*rng)].copy()
     if metric.startswith("Chỉ số"):
-        d["y"], ytitle, fmt = d["recovery_index"], "Chỉ số phục hồi (2019 = 100)", ".0f"
+        d["y"], ytitle, fmt, ytick, unit, mname = d["recovery_index"], "Chỉ số phục hồi (2019 = 100)", ",.1f", ",.0f", " (2019 = 100)", "Chỉ số phục hồi"
     elif metric.startswith("Lượt"):
-        d["y"], ytitle, fmt = d["arrivals"], "Lượt khách mỗi tháng", ",.0f"
+        d["y"], ytitle, fmt, ytick, unit, mname = d["arrivals"], "Lượt khách quốc tế (lượt)", ",.0f", ",.0f", " lượt", "Lượt khách"
     else:
         tot_m = m.groupby("date")["arrivals"].transform("sum")
         d = m.loc[m["market"].isin(sel) & m["date"].between(*rng)].copy()
-        d["y"], ytitle, fmt = 100 * d["arrivals"] / tot_m.loc[d.index], "Tỷ trọng trong tổng (%)", ".1f"
+        d["y"], ytitle, fmt, ytick, unit, mname = 100 * d["arrivals"] / tot_m.loc[d.index], "Tỷ trọng trong tổng lượt khách (%)", ",.1f", ",.1f", "%", "Tỷ trọng"
     if smooth:
         d["y"] = d.sort_values("date").groupby("market")["y"].transform(lambda s: s.rolling(3, min_periods=2).mean())
 
@@ -331,7 +336,7 @@ def _explorer_free(D):
         fig.add_trace(go.Scatter(
             x=g.index, y=g.values, mode="lines+markers", name=dl.label(mk), connectgaps=False,
             line=dict(color=colors[mk], width=3), marker=dict(size=6, symbol=PLOTLY_MARKER.get(hs.MARKET_MARKERS.get(mk, "o"), "circle")),
-            hovertemplate=f"<b>{mk}</b> %{{x|%m/%Y}}: %{{y:{fmt}}}<extra></extra>"))
+            hovertemplate=f"<b>{mk}</b> · %{{x|%m/%Y}}<br>{mname}: <b>%{{y:{fmt}}}{unit}</b><extra></extra>"))
         last = g.dropna()
         if len(last):
             fig.add_trace(go.Scatter(x=[last.index[-1]], y=[last.iloc[-1]], mode="text", text=[f"  {mk}"], textposition="middle right",
@@ -341,10 +346,10 @@ def _explorer_free(D):
     if pd.Timestamp(rng[0]) <= pd.Timestamp("2021-12-01") and pd.Timestamp(rng[1]) >= pd.Timestamp("2020-04-01"):
         add_gap_band(fig, start=str(max(pd.Timestamp(rng[0]), pd.Timestamp("2020-04-01")).date()),
                      end=str(min(pd.Timestamp(rng[1]), pd.Timestamp("2021-12-31")).date()))
-    ui.style_fig(fig, 460, legend=False, margin=dict(l=10, r=90, t=10, b=10))
+    ui.style_fig(fig, 480, legend=False, margin=dict(l=10, r=90, t=10, b=10))
     fig.update_layout(hovermode="x unified")
-    fig.update_yaxes(title=ytitle)
-    fig.update_xaxes(range=[rng[0], pd.Timestamp(rng[1]) + pd.DateOffset(months=4)])
+    fig.update_yaxes(title_text=ytitle, tickformat=ytick)
+    fig.update_xaxes(title_text="Thời gian (tháng/năm)", tickformat="%m/%Y", range=[rng[0], pd.Timestamp(rng[1]) + pd.DateOffset(months=4)])
     if metric.startswith("Chỉ số"):
         main_title = f"Diễn biến phục hồi của các thị trường ({ui.mlabel(rng[0])} – {ui.mlabel(rng[1])})"
     elif metric.startswith("Lượt"):
@@ -381,10 +386,11 @@ def _explorer_free(D):
         s = snap_rk.dropna(subset=["recovery_index"]).sort_values("recovery_index", ascending=False).head(15).iloc[::-1]
         fig = go.Figure(go.Bar(
             x=s["recovery_index"], y=[dl.label(k) for k in s["market"]], orientation="h",
-            marker_color=[ui.STATUS_COLOR[x] for x in s["status"]], text=[ui.n0(v) for v in s["recovery_index"]], textposition="outside",
+            marker_color=[ui.STATUS_COLOR[x] for x in s["status"]], text=[ui.n1(v) for v in s["recovery_index"]], textposition="outside",
             cliponaxis=False, customdata=np.stack([s["arrivals"]], 1),
-            hovertemplate="<b>%{y}</b><br>Chỉ số phục hồi: %{x:.0f}<br>Lượt khách: %{customdata[0]:,.0f}<extra></extra>"))
+            hovertemplate="<b>%{y}</b><br>Chỉ số phục hồi: <b>%{x:,.1f}</b> (2019 = 100)<br>Lượt khách: %{customdata[0]:,.0f} lượt<extra></extra>"))
         fig.add_vline(x=100, line_dash="dot", line_color=INK, annotation_text="Mốc 2019 = 100", annotation_position="top right")
+        rk_xtitle, rk_xtick, rk_xmax = "Chỉ số phục hồi (2019 = 100)", ",.0f", float(s["recovery_index"].max()) * 1.15 if len(s) else 120
         rank_title = f"Mức phục hồi theo từng tháng so với năm 2019 ({ui.mlabel(rk_date)})"
         rank_sub = (f"15 thị trường có chỉ số phục hồi cao nhất trong {ui.mlabel(rk_date)} (Cam: dưới 95 · Xám: 95–105 · Xanh: trên 105). "
                     "Lưu ý: bộ lọc xếp hạng bên dưới độc lập với biểu đồ xu hướng phía trên.")
@@ -394,9 +400,10 @@ def _explorer_free(D):
             x=s["arrivals"], y=[dl.label(k) for k in s["market"]], orientation="h",
             marker_color=[colors[k] for k in s["market"]], text=[ui.big(v) for v in s["arrivals"]], textposition="outside",
             cliponaxis=False, customdata=np.stack([s["recovery_index"].fillna(-1)], 1),
-            hovertemplate="<b>%{y}</b><br>Lượt khách: %{x:,.0f}<br>Chỉ số phục hồi: %{customdata[0]:.0f}<extra></extra>"))
+            hovertemplate="<b>%{y}</b><br>Lượt khách: <b>%{x:,.0f} lượt</b><br>Chỉ số phục hồi: %{customdata[0]:,.1f}<extra></extra>"))
+        rk_xtitle, rk_xtick, rk_xmax = "Lượt khách quốc tế (lượt)", ",.0f", float(s["arrivals"].max()) * 1.18 if len(s) else 100
         rank_title = f"Quy mô lượt khách giữa các thị trường ({ui.mlabel(rk_date)})"
-        rank_sub = (f"15 thị trường có số lượt khách thực tế cao nhất trong {ui.mlabel(rk_date)}. "
+        rank_sub = (f"15 thị trường có số lượt khách thực tế cao nhất trong {ui.mlabel(rk_date)} (nhãn cột rút gọn theo nghìn/triệu lượt). "
                     "Bộ lọc xếp hạng bên dưới hoạt động độc lập với biểu đồ xu hướng phía trên.")
     else:
         tot_rk = snap_rk["arrivals"].sum()
@@ -406,14 +413,15 @@ def _explorer_free(D):
             x=s["share"], y=[dl.label(k) for k in s["market"]], orientation="h",
             marker_color=[colors[k] for k in s["market"]], text=[ui.pct(v, signed=False) for v in s["share"]], textposition="outside",
             cliponaxis=False, customdata=np.stack([s["arrivals"]], 1),
-            hovertemplate="<b>%{y}</b><br>Tỷ trọng: %{x:.1f}%<br>Lượt khách: %{customdata[0]:,.0f}<extra></extra>"))
+            hovertemplate="<b>%{y}</b><br>Tỷ trọng: <b>%{x:,.1f}%</b><br>Lượt khách: %{customdata[0]:,.0f} lượt<extra></extra>"))
+        rk_xtitle, rk_xtick, rk_xmax = "Tỷ trọng trong tổng lượt khách (%)", ",.1f", float(s["share"].max()) * 1.18 if len(s) else 100
         rank_title = f"Tỷ trọng đóng góp lượt khách theo thị trường ({ui.mlabel(rk_date)})"
         rank_sub = (f"15 thị trường đóng góp tỷ trọng lớn nhất trong tổng lượt khách {ui.mlabel(rk_date)}. "
                     "Bộ lọc xếp hạng bên dưới hoạt động độc lập với biểu đồ xu hướng phía trên.")
 
-    ui.style_fig(fig, 440, legend=False, margin=dict(l=10, r=70, t=10, b=10))
-    fig.update_yaxes(showgrid=False)
-    fig.update_xaxes(showgrid=False, visible=False)
+    ui.style_fig(fig, 470, legend=False, margin=dict(l=10, r=70, t=10, b=10))
+    fig.update_yaxes(showgrid=False, title_text="Thị trường")
+    fig.update_xaxes(visible=True, showgrid=True, gridcolor=GRID, title_text=rk_xtitle, tickformat=rk_xtick, range=[0, rk_xmax])
     _set_title(fig, rank_title)
     ui.chart_title("", rank_sub)
     ui.show(fig, key="ex_rank_chart")
@@ -439,10 +447,12 @@ def _explorer_qa(D):
             x=short["short"], y=[dl.label(k) for k in short["market"]], orientation="h", marker_color=P["Poppy"],
             text=[ui.big(v) for v in short["short"]], textposition="outside", cliponaxis=False,
             customdata=np.stack([short["recovery_index"], short["arrivals"]], 1),
-            hovertemplate="<b>%{y}</b><br>Còn thiếu: %{x:,.0f} lượt/tháng<br>Chỉ số: %{customdata[0]:.0f}<extra></extra>"))
-        ui.style_fig(fig, 380, legend=False, margin=dict(l=10, r=70, t=10, b=10))
-        fig.update_yaxes(showgrid=False)
-        fig.update_xaxes(visible=False)
+            hovertemplate="<b>%{y}</b><br>Còn thiếu: <b>%{x:,.0f} lượt</b><br>Lượt khách tháng này: %{customdata[1]:,.0f} lượt<br>Chỉ số phục hồi: <b>%{customdata[0]:,.1f}</b><extra></extra>"))
+        ui.style_fig(fig, 400, legend=False, margin=dict(l=10, r=70, t=10, b=10))
+        fig.update_yaxes(showgrid=False, title_text="Thị trường")
+        fig.update_xaxes(visible=True, showgrid=True, gridcolor=GRID,
+                         title_text="Số lượt khách còn thiếu so với cùng tháng 2019 (lượt)",
+                         tickformat=",.0f", range=[0, float(short["short"].max()) * 1.18 if len(short) else 100])
         top = short.iloc[-1]
         _set_title(fig, f"Mức thiếu hụt lượt khách ở các thị trường chưa phục hồi ({ui.mlabel(end)} so với 2019)")
         ui.chart_title("", f"{top['market']} còn thiếu {ui.big(top['short'])} lượt trong {ui.mlabel(end)} — lớn nhất trong 8 thị trường thiếu hụt nhiều nhất")
@@ -459,10 +469,11 @@ def _explorer_qa(D):
         low = s.idxmin()
         cols = [P["Pea Flower"] if k in top3 else ("#D9DCDD" if k != low else P["Poppy"]) for k in s.index]
         fig = go.Figure(go.Bar(x=s.index, y=s.values, marker_color=cols, text=[ui.n0(v) for v in s.values], textposition="outside",
-                               hovertemplate="%{x}: <b>%{y:.0f}</b><extra></extra>"))
+                               hovertemplate="Tháng: <b>%{x}</b><br>Chỉ số mùa vụ: <b>%{y:,.1f}</b> (trung bình T1–T11 = 100)<extra></extra>"))
         fig.add_hline(y=100, line_dash="dot", line_color=INK, annotation_text="Trung bình năm = 100", annotation_position="top left")
-        ui.style_fig(fig, 380, legend=False)
-        fig.update_yaxes(title="Chỉ số mùa vụ (trung bình T1–T11 = 100)")
+        ui.style_fig(fig, 400, legend=False)
+        fig.update_xaxes(title_text="Tháng trong năm")
+        fig.update_yaxes(title_text="Chỉ số mùa vụ (trung bình T1–T11 = 100)", tickformat=",.0f", range=[0, float(s.max()) * 1.16])
         _set_title(fig, f"Đặc điểm mùa vụ của du lịch quốc tế: thị trường {mk} (2023–2025)")
         ui.chart_title("", f"Đông khách nhất vào {', '.join(top3)}, thấp nhất vào {low} · Xanh: 3 tháng cao nhất · Cam: tháng thấp nhất (trung vị 2023–2025 ÷ bình quân T1–T11)")
         ui.show(fig, key="qa2")
@@ -480,11 +491,11 @@ def _explorer_qa(D):
         xs = np.linspace(g["interest_lag"].min(), g["interest_lag"].max(), 20)
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=g["interest_lag"], y=g["arrivals"], mode="markers", marker=dict(size=9, color=colors[mk], line=dict(color=INK, width=.6)),
-                                 customdata=g["date"].dt.strftime("%m/%Y"), hovertemplate="Tháng %{customdata}<br>Mức quan tâm: %{x}<br>Lượt khách: %{y:,.0f}<extra></extra>"))
+                                 customdata=g["date"].dt.strftime("%m/%Y"), hovertemplate="Thời gian: %{customdata}<br>Mức quan tâm tìm kiếm: %{x:,.0f}/100<br>Lượt khách: <b>%{y:,.0f} lượt</b><extra></extra>"))
         fig.add_trace(go.Scatter(x=xs, y=np.polyval(coef, xs), mode="lines", line=dict(color=INK, dash="dash", width=1.5), hoverinfo="skip"))
-        ui.style_fig(fig, 400, legend=False)
-        fig.update_xaxes(title=f"Mức quan tâm tìm kiếm {lag} tháng trước (thang 0–100, tương đối)", showgrid=True, gridcolor=GRID)
-        fig.update_yaxes(title="Lượt khách thực tế")
+        ui.style_fig(fig, 410, legend=False)
+        fig.update_xaxes(title_text=f"Mức quan tâm tìm kiếm đi trước {lag} tháng (thang chuẩn hóa 0–100)", tickformat=",.0f", showgrid=True, gridcolor=GRID)
+        fig.update_yaxes(title_text="Lượt khách quốc tế (lượt)", tickformat=",.0f")
         _set_title(fig, f"Mối liên hệ giữa tìm kiếm trực tuyến (đi trước {lag} tháng) và lượt khách từ {mk}")
         ui.chart_title("", f"Pearson r = {hs._vn(f'{pr:.2f}')} · Spearman ρ = {hs._vn(f'{sr:.2f}')} · {len(g)} tháng có đủ dữ liệu tìm kiếm và lượt khách")
         ui.show(fig, key="qa3")
@@ -524,7 +535,7 @@ def page_race(D):
         return go.Bar(x=s.values, y=[dl.label(k) for k in s.index], orientation="h",
                       marker_color=[ui.STATUS_COLOR["Chưa phục hồi"] if v < 95 else (ui.STATUS_COLOR["Vượt 2019"] if v > 105 else ui.STATUS_COLOR["Quanh mốc 2019"]) for v in s.values],
                       text=[ui.n0(v) for v in s.values], textposition="outside", cliponaxis=False,
-                      hovertemplate="<b>%{y}</b>: %{x:.0f}<extra></extra>")
+                      hovertemplate="<b>%{y}</b><br>Chỉ số phục hồi: <b>%{x:,.1f}</b> (2019 = 100)<extra></extra>")
 
     def date_note(date):
         return [dict(x=0.97, y=0.08, xref="paper", yref="paper", text=f"<b>{ui.mlabel(date)}</b>", showarrow=False,
@@ -533,16 +544,17 @@ def page_race(D):
     dates = list(piv.index)
     frames = [go.Frame(data=[bar(d)], name=d.strftime("%Y-%m"), layout=dict(annotations=date_note(d))) for d in dates]
     fig = go.Figure(data=[bar(dates[0])], frames=frames)
-    ui.style_fig(fig, 560, legend=False, margin=dict(l=10, r=40, t=10, b=90))
+    ui.style_fig(fig, 580, legend=False, margin=dict(l=10, r=40, t=10, b=90))
     fig.update_layout(
-        annotations=date_note(dates[0]), yaxis=dict(categoryorder="total ascending", showgrid=False),
-        xaxis=dict(range=[0, xmax], title="Chỉ số phục hồi (2019 = 100)", showgrid=True, gridcolor=GRID),
+        annotations=date_note(dates[0]),
         updatemenus=[dict(type="buttons", direction="left", x=0, y=-0.13, xanchor="left", yanchor="top", buttons=[
             dict(label="▶ Chạy", method="animate", args=[None, dict(frame=dict(duration=dur, redraw=True), transition=dict(duration=0),
                                                                     fromcurrent=True, mode="immediate")]),
             dict(label="⏸ Dừng", method="animate", args=[[None], dict(frame=dict(duration=0, redraw=False), mode="immediate", transition=dict(duration=0))])])],
         sliders=[dict(active=0, x=0.18, y=-0.1, len=0.8, currentvalue=dict(prefix="Tháng: ", font=dict(size=13)), pad=dict(t=0, b=10),
                       steps=[dict(label=ui.mlabel(d), method="animate", args=[[d.strftime("%Y-%m")], dict(mode="immediate", frame=dict(duration=0, redraw=True), transition=dict(duration=0))]) for d in dates])])
+    fig.update_yaxes(title_text="Thị trường", categoryorder="total ascending", showgrid=False)
+    fig.update_xaxes(range=[0, xmax], title_text="Chỉ số phục hồi (2019 = 100)", tickformat=",.0f", showgrid=True, gridcolor=GRID)
     fig.add_shape(type="line", x0=100, x1=100, y0=0, y1=1, yref="paper", line=dict(color=INK, dash="dot", width=1.5))
     _set_title(fig, f"Diễn biến phục hồi của các thị trường theo từng tháng (từ {start})")
     ui.chart_title("", "Cam: dưới 95 · Xám: quanh mốc 2019 (95–105) · Xanh: trên 105. Đường chấm dọc đánh dấu mốc năm 2019 = 100.")
@@ -557,12 +569,18 @@ def page_race(D):
         first[k] = hit.index[0] if len(hit) else pd.NaT
     fd = pd.Series(first).sort_values()
     crossed, never = fd.dropna(), fd[fd.isna()].index.tolist()
-    fig2 = go.Figure(go.Scatter(x=crossed.values, y=[dl.label(k) for k in crossed.index], mode="markers",
-                                marker=dict(size=13, color=P["Pea Flower"], line=dict(color=INK, width=.6)),
-                                hovertemplate="<b>%{y}</b><br>Lần đầu ≥ 100: %{x|%m/%Y}<extra></extra>"))
-    ui.style_fig(fig2, 60 + 28 * max(len(crossed), 3), legend=False, margin=dict(l=10, r=20, t=10, b=30))
-    fig2.update_yaxes(autorange="reversed", showgrid=True, gridcolor=GRID)
-    fig2.update_xaxes(showgrid=False)
+    fig2 = go.Figure(go.Scatter(
+        x=crossed.values, y=[dl.label(k) for k in crossed.index], mode="markers+text",
+        text=[f" {ui.mlabel(d)}" for d in crossed.values], textposition="middle right", textfont=dict(size=11, color=INK),
+        marker=dict(size=12, color=P["Pea Flower"], line=dict(color=INK, width=.6)),
+        hovertemplate="<b>%{y}</b><br>Lần đầu đạt chỉ số ≥ 100: <b>%{x|%m/%Y}</b><extra></extra>"))
+    ui.style_fig(fig2, 90 + 28 * max(len(crossed), 3), legend=False, margin=dict(l=10, r=60, t=10, b=30))
+    fig2.update_yaxes(title_text="Thị trường", autorange="reversed", showgrid=True, gridcolor=GRID)
+    if len(crossed):
+        fig2.update_xaxes(title_text="Thời gian đạt mốc 2019 (tháng/năm)", tickformat="%m/%Y", showgrid=True, gridcolor=GRID,
+                          range=[pd.Timestamp(crossed.min()) - pd.DateOffset(months=1), pd.Timestamp(crossed.max()) + pd.DateOffset(months=4)])
+    else:
+        fig2.update_xaxes(title_text="Thời gian đạt mốc 2019 (tháng/năm)", tickformat="%m/%Y", showgrid=True, gridcolor=GRID)
     _set_title(fig2, f"Thời điểm từng thị trường lần đầu đạt mốc năm 2019 (từ {ui.mlabel(piv.index[0])})")
     ui.chart_title("", f"Tháng đầu tiên ghi nhận chỉ số phục hồi ≥ 100 kể từ {ui.mlabel(piv.index[0])}"
                    + (f" · Chưa đạt mốc 100: {', '.join(never)}" if never else ""))
@@ -592,12 +610,12 @@ def page_season(D):
         fig = go.Figure(go.Heatmap(
             z=z.values, x=dl.MONTH_LABEL, y=[dl.label(k) for k in piv.index], colorscale=DIV_SCALE, zmin=40, zmax=160,
             customdata=piv.values, text=piv.round(0).values, texttemplate="%{text:.0f}", textfont=dict(size=10),
-            hovertemplate="<b>%{y}</b> %{x}/" + str(y) + "<br>Chỉ số phục hồi: %{customdata:.0f}<extra></extra>", hoverongaps=False,
-            colorbar=dict(title="Chỉ số", tickvals=[40, 70, 100, 130, 160], ticktext=["≤40", "70", "100", "130", "≥160"], len=.8)))
-        ui.style_fig(fig, 80 + 24 * len(piv), legend=False, margin=dict(l=10, r=10, t=10, b=10))
-        fig.update_yaxes(showgrid=False, tickfont=dict(size=11))
-        fig.update_xaxes(side="top")
-        _set_title(fig, f"Mức phục hồi theo từng tháng so với năm 2019 (Năm {y})", top_margin=74)
+            hovertemplate="<b>%{y}</b> · %{x}/" + str(y) + "<br>Chỉ số phục hồi: <b>%{customdata:,.1f}</b> (2019 = 100)<extra></extra>", hoverongaps=False,
+            colorbar=dict(title="Chỉ số<br>(2019=100)", tickvals=[40, 70, 100, 130, 160], ticktext=["≤40", "70", "100", "130", "≥160"], len=.8)))
+        ui.style_fig(fig, 110 + 24 * len(piv), legend=False, margin=dict(l=10, r=10, t=10, b=10))
+        fig.update_yaxes(showgrid=False, title_text="Thị trường", tickfont=dict(size=11))
+        fig.update_xaxes(side="top", title_text="Tháng trong năm")
+        _set_title(fig, f"Mức phục hồi theo từng tháng so với năm 2019 (Năm {y})", top_margin=88)
         ui.chart_title("", "Mỗi ô là chỉ số phục hồi của một thị trường trong một tháng (= 100 là bằng cùng tháng 2019). "
                        "Cam: dưới 100 · Xám: quanh 100 · Xanh: vượt 100 · Ô trắng: thiếu số liệu.")
         ui.show(fig, key="se_heat")
@@ -609,11 +627,14 @@ def page_season(D):
         dcol = {"Đà Nẵng": P["Pea Flower"], "Nha Trang": P["Florida Oranges"]}
         fig = go.Figure()
         for dest in rain.columns:
-            fig.add_trace(go.Bar(x=dl.MONTH_LABEL, y=rain[dest].values, name=dest, marker_color=dcol[dest],
-                                 hovertemplate=f"<b>{dest}</b> %{{x}}: %{{y:.0f}} mm<extra></extra>"))
+            fig.add_trace(go.Bar(
+                x=dl.MONTH_LABEL, y=rain[dest].values, name=dest, marker_color=dcol[dest],
+                text=[ui.n0(v) for v in rain[dest].values], textposition="outside", textfont=dict(size=10), cliponaxis=False,
+                hovertemplate=f"<b>{dest}</b> · %{{x}}<br>Lượng mưa trung vị: <b>%{{y:,.1f}} mm</b><extra></extra>"))
         fig.update_layout(barmode="group")
-        ui.style_fig(fig, 360)
-        fig.update_yaxes(title="Lượng mưa trung vị (mm/tháng)")
+        ui.style_fig(fig, 390)
+        fig.update_xaxes(title_text="Tháng trong năm")
+        fig.update_yaxes(title_text="Lượng mưa trung vị (mm)", tickformat=",.0f", range=[0, float(rain.max().max()) * 1.18])
         wet = {c: ", ".join(f"T{k}" for k in rain[c].sort_values(ascending=False).head(3).index.sort_values()) for c in rain.columns}
         _set_title(fig, "Phân bố lượng mưa trung vị theo tháng tại Đà Nẵng và Nha Trang (2017–2025)")
         ui.chart_title("", f"Cao điểm mưa: Đà Nẵng ({wet.get('Đà Nẵng', '–')}), Nha Trang ({wet.get('Nha Trang', '–')})")
@@ -622,9 +643,11 @@ def page_season(D):
         for dest in sun.columns:
             fig.add_trace(go.Scatter(x=dl.MONTH_LABEL, y=sun[dest].values, mode="lines+markers", name=dest,
                                      line=dict(color=dcol[dest], width=3),
-                                     hovertemplate=f"<b>{dest}</b> %{{x}}: %{{y:.0f}} giờ<extra></extra>"))
-        ui.style_fig(fig, 300)
-        fig.update_yaxes(title="Số giờ nắng trung vị (giờ/tháng)")
+                                     hovertemplate=f"<b>{dest}</b> · %{{x}}<br>Số giờ nắng trung vị: <b>%{{y:,.1f}} giờ</b><extra></extra>"))
+        ui.style_fig(fig, 330)
+        fig.update_layout(hovermode="x unified")
+        fig.update_xaxes(title_text="Tháng trong năm")
+        fig.update_yaxes(title_text="Số giờ nắng trung vị (giờ)", tickformat=",.0f")
         _set_title(fig, "Xu hướng thời tiết giai đoạn 2017–2025: số giờ nắng trung vị theo tháng")
         ui.chart_title("", "Số giờ nắng trung vị mỗi tháng tại Đà Nẵng và Nha Trang, giai đoạn 2017–2025")
         ui.show(fig, key="se_sun")
@@ -651,11 +674,11 @@ def page_segments(D):
                 text=[x for x in g.index], textposition="top center", textfont=dict(size=10),
                 marker=dict(size=np.sqrt(g["arrivals_latest_ytd"]) / 18 + 8, color=ui.CLUSTER_COLOR[k], opacity=.85, line=dict(color=INK, width=.6)),
                 customdata=np.stack([g["recovery_speed"], g["growth_pct"], g["arrivals_latest_ytd"]], 1),
-                hovertemplate="<b>%{text}</b><br>Khoảng cách: %{x:,.0f} km<br>Biên độ mùa vụ: %{y:.0f}<br>Tốc độ phục hồi: %{customdata[0]:.1f} điểm/tháng"
-                              "<br>Tăng trưởng: %{customdata[1]:.1f}%<br>Lượt khách YTD: %{customdata[2]:,.0f}<extra></extra>"))
-        ui.style_fig(fig, 520)
-        fig.update_xaxes(title="Khoảng cách địa lý đến Việt Nam (km)", showgrid=True, gridcolor=GRID)
-        fig.update_yaxes(title="Biên độ mùa vụ (điểm chỉ số)")
+                hovertemplate="<b>%{text}</b><br>Khoảng cách: %{x:,.0f} km<br>Biên độ mùa vụ: %{y:,.1f} điểm chỉ số<br>Tốc độ phục hồi: %{customdata[0]:,.1f} điểm/tháng"
+                              "<br>Tăng trưởng cùng kỳ: %{customdata[1]:+,.1f}%<br>Lượt khách từ đầu năm: %{customdata[2]:,.0f} lượt<extra></extra>"))
+        ui.style_fig(fig, 540)
+        fig.update_xaxes(title_text="Khoảng cách địa lý đến Việt Nam (km)", tickformat=",.0f", showgrid=True, gridcolor=GRID)
+        fig.update_yaxes(title_text="Biên độ mùa vụ (điểm chỉ số)", tickformat=",.0f")
         _set_title(fig, "Phân nhóm thị trường theo khoảng cách địa lý và biên độ mùa vụ")
         ui.chart_title("", "Mỗi điểm đại diện cho một thị trường. Kích thước thể hiện lượng khách lũy kế từ đầu năm, màu sắc thể hiện nhóm phân khúc (K-means, k = 2).")
         ui.show(fig, key="sg_scatter")
