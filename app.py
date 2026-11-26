@@ -437,9 +437,9 @@ def _explorer_qa(D):
     m, colors = D["master"], D["colors"]
     end = dl.latest_date(m)
     q = st.radio("Chọn câu hỏi cần phân tích", [
-        "1️⃣ Nên ưu tiên kéo khách trở lại từ thị trường nào?",
-        "2️⃣ Chạy chiến dịch vào tháng nào cho một thị trường?",
-        "3️⃣ Tìm kiếm trực tuyến có báo trước lượt khách không?"], key="qa_q", horizontal=True)
+        "Câu 1: Nên ưu tiên kéo khách trở lại từ thị trường nào?",
+        "Câu 2: Chạy chiến dịch vào tháng nào cho một thị trường?",
+        "Câu 3: Tìm kiếm trực tuyến có báo trước lượt khách không?"], key="qa_q", horizontal=True)
     number = int(q[0])
     st.markdown(f"### Câu {number:02d} · {['Tìm thị trường ưu tiên', 'Đọc mùa vụ', 'Đọc mối liên hệ'][number - 1]}")
     prompts = [
@@ -474,7 +474,7 @@ def _explorer_qa(D):
         selected = st.radio("Phương án", choices, index=None, key=f"qa_choice_{token}",
                              label_visibility="collapsed", disabled=result is not None)
         if result is None:
-            if st.button("✅ Xác nhận đáp án", key=f"qa_submit_{token}",
+            if st.button("Gửi câu trả lời", key=f"qa_submit_{token}",
                          disabled=not selected, type="primary"):
                 attempts[key] = attempts.get(key, 0) + 1
                 results[key] = {
