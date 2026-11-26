@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import html
+import json
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 import house_style as hs
 
@@ -142,6 +144,130 @@ section[data-testid="stSidebar"] .stRadio label:hover {{ background: rgba(255,25
 .stTabs [aria-selected="true"] {{ background:#fff; }}
 div[data-testid="stMetric"] {{ background:#fff; border:1px solid {SAND_DARK}; border-radius:16px; padding:.7rem .9rem; }}
 .stButton>button, .stDownloadButton>button, .stFormSubmitButton>button {{ border-radius: 12px; font-weight:700; }}
+
+/* plotly modebar & external scrollbars */
+.js-plotly-plot .plotly .modebar {{
+  top: 4px !important;
+  right: 6px !important;
+  background: rgba(255,255,255,0.92) !important;
+  border: 1px solid {SAND_DARK} !important;
+  border-radius: 10px !important;
+  padding: 2px 4px !important;
+  box-shadow: 0 2px 8px rgba(43,43,35,0.08) !important;
+}}
+.js-plotly-plot .plotly .modebar-group {{
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  background: transparent !important;
+  padding: 0 !important;
+}}
+.js-plotly-plot .plotly .modebar-btn {{
+  width: 26px !important;
+  height: 26px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  padding: 3px !important;
+}}
+.js-plotly-plot .plotly .modebar-btn:hover {{
+  background: {SAND_DARK} !important;
+}}
+.js-plotly-plot .plotly .modebar-btn svg {{
+  width: 16px !important;
+  height: 16px !important;
+}}
+.vt-chart-shell {{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}}
+.vt-chart-row {{
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+}}
+.vt-chart-main {{
+  flex: 1 1 auto;
+  min-width: 0;
+}}
+.vt-vscroll {{
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  width: 18px;
+  margin-left: 6px;
+  padding: 2px 0;
+  user-select: none;
+}}
+.vt-hscroll {{
+  display: none;
+  flex-direction: row;
+  align-items: center;
+  height: 18px;
+  margin-top: 4px;
+  margin-right: 24px;
+  padding: 0 2px;
+  user-select: none;
+}}
+.vt-arrow {{
+  background: transparent;
+  border: none;
+  color: {MUTED};
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 3px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}}
+.vt-arrow:hover {{
+  background: {SAND_DARK};
+  color: {INK};
+}}
+.vt-htrack {{
+  position: relative;
+  flex: 1 1 auto;
+  height: 8px;
+  background: #E8E5DC;
+  border-radius: 999px;
+  margin: 0 4px;
+  cursor: pointer;
+}}
+.vt-hthumb {{
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 30%;
+  background: #5E718A;
+  border-radius: 999px;
+  cursor: grab;
+}}
+.vt-hthumb:active {{ cursor: grabbing; background: #47586E; }}
+.vt-vtrack {{
+  position: relative;
+  flex: 1 1 auto;
+  width: 8px;
+  background: #E8E5DC;
+  border-radius: 999px;
+  margin: 4px 0;
+  cursor: pointer;
+}}
+.vt-vthumb {{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 30%;
+  background: #5E718A;
+  border-radius: 999px;
+  cursor: grab;
+}}
+.vt-vthumb:active {{ cursor: grabbing; background: #47586E; }}
 </style>
 """
 
@@ -149,8 +275,326 @@ WAVE = ("<svg viewBox='0 0 1440 80' preserveAspectRatio='none'><path fill='%s' d
         "C960,60 1200,90 1440,40 L1440,80 L0,80 Z'/></svg>" % SAND)
 
 
+_ENHANCE_HTML = """
+<script>
+(function() {
+  const doc = window.parent.document;
+  const win = window.parent;
+
+  const RESET_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>';
+
+  const TOOLTIPS = {
+    zoomIn: "Phóng to",
+    zoomOut: "Thu nhỏ",
+    pan: "Di chuyển biểu đồ",
+    boxZoom: "Khoanh vùng phóng to",
+    reset: "Khôi phục ban đầu",
+    autoscale: "Xem toàn bộ biểu đồ",
+    download: "Lưu ảnh biểu đồ"
+  };
+
+  function classifyBtn(btn) {
+    const attr = btn.getAttribute("data-attr") || "";
+    const val = btn.getAttribute("data-val") || "";
+    const title = btn.getAttribute("data-title") || "";
+    if (attr === "zoom" && val === "in") return "zoomIn";
+    if (attr === "zoom" && val === "out") return "zoomOut";
+    if (attr === "geo" && val === "zoomin") return "zoomIn";
+    if (attr === "geo" && val === "zoomout") return "zoomOut";
+    if (attr === "dragmode" && val === "zoom") return "boxZoom";
+    if (attr === "dragmode" && val === "pan") return "pan";
+    if ((attr === "zoom" && val === "reset") || (attr === "geo" && val === "reset")) return "reset";
+    if (attr === "zoom" && val === "auto") return "autoscale";
+    if ((!attr && !val && /png|image|download/i.test(title)) || attr === "toImage") return "download";
+    return null;
+  }
+
+  function styleModebar(gd) {
+    const mb = gd.querySelector(".modebar");
+    if (!mb) return;
+    const data = gd._fullData || gd.data || [];
+    const isTreemap = data.some(t => t.type === "treemap");
+    const isGeo = data.some(t => t.type === "scattergeo");
+    const order = isTreemap
+      ? ["download"]
+      : (isGeo
+          ? ["zoomIn", "zoomOut", "pan", "reset", "download"]
+          : ["zoomIn", "zoomOut", "pan", "reset", "autoscale", "download"]);
+
+    const btns = Array.from(mb.querySelectorAll("a.modebar-btn"));
+    const byKey = {};
+    btns.forEach(b => {
+      const k = classifyBtn(b);
+      if (k && !byKey[k]) byKey[k] = b;
+    });
+
+    let grp = mb.querySelector(".modebar-group.vt-ordered");
+    if (!grp) {
+      mb.innerHTML = "";
+      grp = doc.createElement("div");
+      grp.className = "modebar-group vt-ordered";
+      mb.appendChild(grp);
+    } else {
+      grp.innerHTML = "";
+    }
+
+    order.forEach(k => {
+      const b = byKey[k];
+      if (!b) return;
+      if (TOOLTIPS[k]) {
+        b.setAttribute("data-title", TOOLTIPS[k]);
+        b.setAttribute("aria-label", TOOLTIPS[k]);
+      }
+      if (k === "reset") {
+        b.innerHTML = RESET_SVG;
+      }
+      grp.appendChild(b);
+    });
+  }
+
+  function toNum(ax, v) {
+    if (v === undefined || v === null) return NaN;
+    if (ax && ax.type === "date") {
+      const t = new Date(v).getTime();
+      return isNaN(t) ? Number(v) : t;
+    }
+    return Number(v);
+  }
+
+  function fromNum(ax, n) {
+    if (ax && ax.type === "date") {
+      const d = new Date(n);
+      const pad = x => String(x).padStart(2, "0");
+      return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()) + " " +
+             pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" + pad(d.getUTCSeconds());
+    }
+    return n;
+  }
+
+  function attachScrollbars(gd) {
+    const data = gd._fullData || gd.data || [];
+    const isTreemap = data.some(t => t.type === "treemap");
+    const isGeo = data.some(t => t.type === "scattergeo");
+    if (isTreemap || isGeo) return;
+    const fl = gd._fullLayout;
+    if (!fl || !fl.xaxis || !fl.yaxis) return;
+
+    const host = gd.closest('[data-testid="stPlotlyChart"]') || gd.parentElement;
+    if (!host) return;
+
+    if (!host.dataset.vtScrollInit) {
+      host.dataset.vtScrollInit = "1";
+      const shell = doc.createElement("div");
+      shell.className = "vt-chart-shell";
+      const row = doc.createElement("div");
+      row.className = "vt-chart-row";
+      const main = doc.createElement("div");
+      main.className = "vt-chart-main";
+
+      while (host.firstChild) main.appendChild(host.firstChild);
+
+      const vBar = doc.createElement("div");
+      vBar.className = "vt-vscroll";
+      vBar.innerHTML = '<button type="button" class="vt-arrow vt-up" title="Cuộn lên">▲</button><div class="vt-vtrack"><div class="vt-vthumb"></div></div><button type="button" class="vt-arrow vt-down" title="Cuộn xuống">▼</button>';
+
+      const hBar = doc.createElement("div");
+      hBar.className = "vt-hscroll";
+      hBar.innerHTML = '<button type="button" class="vt-arrow vt-left" title="Cuộn sang trái">◀</button><div class="vt-htrack"><div class="vt-hthumb"></div></div><button type="button" class="vt-arrow vt-right" title="Cuộn sang phải">▶</button>';
+
+      row.appendChild(main);
+      row.appendChild(vBar);
+      shell.appendChild(row);
+      shell.appendChild(hBar);
+      host.appendChild(shell);
+      host._vtBars = { hBar, vBar };
+    }
+
+    const bars = host._vtBars;
+    if (!bars) return;
+    const { hBar, vBar } = bars;
+
+    function captureFull() {
+      const xa = gd._fullLayout && gd._fullLayout.xaxis;
+      const ya = gd._fullLayout && gd._fullLayout.yaxis;
+      if (!xa || !ya || !xa.range || !ya.range) return;
+      const x0 = toNum(xa, xa.range[0]), x1 = toNum(xa, xa.range[1]);
+      const y0 = toNum(ya, ya.range[0]), y1 = toNum(ya, ya.range[1]);
+      if (!gd.__vtFull || gd.__vtFull.len !== data.length) {
+        gd.__vtFull = {
+          len: data.length,
+          xMin: Math.min(x0, x1), xMax: Math.max(x0, x1),
+          yMin: Math.min(y0, y1), yMax: Math.max(y0, y1),
+          yRev: y0 > y1
+        };
+      } else {
+        gd.__vtFull.xMin = Math.min(gd.__vtFull.xMin, x0, x1);
+        gd.__vtFull.xMax = Math.max(gd.__vtFull.xMax, x0, x1);
+        gd.__vtFull.yMin = Math.min(gd.__vtFull.yMin, y0, y1);
+        gd.__vtFull.yMax = Math.max(gd.__vtFull.yMax, y0, y1);
+      }
+    }
+
+    function sync() {
+      const xa = gd._fullLayout && gd._fullLayout.xaxis;
+      const ya = gd._fullLayout && gd._fullLayout.yaxis;
+      if (!xa || !ya || !xa.range || !ya.range || !gd.__vtFull) return;
+      const f = gd.__vtFull;
+
+      const cx0 = toNum(xa, xa.range[0]), cx1 = toNum(xa, xa.range[1]);
+      const curMinX = Math.min(cx0, cx1), curMaxX = Math.max(cx0, cx1);
+      const curSpanX = curMaxX - curMinX, fullSpanX = f.xMax - f.xMin;
+
+      if (fullSpanX > 0 && curSpanX > 0 && curSpanX < fullSpanX * 0.992) {
+        hBar.style.display = "flex";
+        const ratio = Math.max(0.08, Math.min(1, curSpanX / fullSpanX));
+        const denom = fullSpanX - curSpanX;
+        const pos = denom > 0 ? Math.max(0, Math.min(1, (curMinX - f.xMin) / denom)) : 0;
+        const thumb = hBar.querySelector(".vt-hthumb");
+        thumb.style.width = (ratio * 100) + "%";
+        thumb.style.left = (pos * (1 - ratio) * 100) + "%";
+      } else {
+        hBar.style.display = "none";
+      }
+
+      const cy0 = toNum(ya, ya.range[0]), cy1 = toNum(ya, ya.range[1]);
+      const curMinY = Math.min(cy0, cy1), curMaxY = Math.max(cy0, cy1);
+      const curSpanY = curMaxY - curMinY, fullSpanY = f.yMax - f.yMin;
+
+      if (fullSpanY > 0 && curSpanY > 0 && curSpanY < fullSpanY * 0.992) {
+        vBar.style.display = "flex";
+        const ratio = Math.max(0.08, Math.min(1, curSpanY / fullSpanY));
+        const denom = fullSpanY - curSpanY;
+        const pos = denom > 0
+          ? (f.yRev
+              ? Math.max(0, Math.min(1, (curMinY - f.yMin) / denom))
+              : Math.max(0, Math.min(1, (f.yMax - curMaxY) / denom)))
+          : 0;
+        const thumb = vBar.querySelector(".vt-vthumb");
+        thumb.style.height = (ratio * 100) + "%";
+        thumb.style.top = (pos * (1 - ratio) * 100) + "%";
+      } else {
+        vBar.style.display = "none";
+      }
+    }
+
+    function applyX(newMin) {
+      const xa = gd._fullLayout.xaxis, f = gd.__vtFull;
+      const cx0 = toNum(xa, xa.range[0]), cx1 = toNum(xa, xa.range[1]);
+      const span = Math.abs(cx1 - cx0);
+      const clamped = Math.max(f.xMin, Math.min(f.xMax - span, newMin));
+      const r = cx0 <= cx1 ? [fromNum(xa, clamped), fromNum(xa, clamped + span)] : [fromNum(xa, clamped + span), fromNum(xa, clamped)];
+      win.Plotly.relayout(gd, { "xaxis.range": r, "xaxis.autorange": false });
+    }
+
+    function applyY(topPosFrac) {
+      const ya = gd._fullLayout.yaxis, f = gd.__vtFull;
+      const cy0 = toNum(ya, ya.range[0]), cy1 = toNum(ya, ya.range[1]);
+      const span = Math.abs(cy1 - cy0);
+      const frac = Math.max(0, Math.min(1, topPosFrac));
+      const denom = Math.max(0, (f.yMax - f.yMin) - span);
+      let minVal, maxVal;
+      if (f.yRev) {
+        minVal = f.yMin + frac * denom;
+        maxVal = minVal + span;
+        win.Plotly.relayout(gd, { "yaxis.range": [fromNum(ya, maxVal), fromNum(ya, minVal)], "yaxis.autorange": false });
+      } else {
+        maxVal = f.yMax - frac * denom;
+        minVal = maxVal - span;
+        win.Plotly.relayout(gd, { "yaxis.range": [fromNum(ya, minVal), fromNum(ya, maxVal)], "yaxis.autorange": false });
+      }
+    }
+
+    if (!gd.dataset.vtEventsBound) {
+      gd.dataset.vtEventsBound = "1";
+      captureFull();
+      sync();
+
+      gd.on("plotly_relayout", () => { styleModebar(gd); sync(); });
+      gd.on("plotly_afterplot", () => { styleModebar(gd); captureFull(); sync(); });
+
+      const hTrack = hBar.querySelector(".vt-htrack"), hThumb = hBar.querySelector(".vt-hthumb");
+      const vTrack = vBar.querySelector(".vt-vtrack"), vThumb = vBar.querySelector(".vt-vthumb");
+
+      hBar.querySelector(".vt-left").onclick = () => {
+        const xa = gd._fullLayout.xaxis, c0 = toNum(xa, xa.range[0]), c1 = toNum(xa, xa.range[1]);
+        applyX(Math.min(c0, c1) - Math.abs(c1 - c0) * 0.2);
+      };
+      hBar.querySelector(".vt-right").onclick = () => {
+        const xa = gd._fullLayout.xaxis, c0 = toNum(xa, xa.range[0]), c1 = toNum(xa, xa.range[1]);
+        applyX(Math.min(c0, c1) + Math.abs(c1 - c0) * 0.2);
+      };
+      vBar.querySelector(".vt-up").onclick = () => {
+        const ya = gd._fullLayout.yaxis, f = gd.__vtFull;
+        const c0 = toNum(ya, ya.range[0]), c1 = toNum(ya, ya.range[1]);
+        const span = Math.abs(c1 - c0), denom = Math.max(1e-9, (f.yMax - f.yMin) - span);
+        const curFrac = f.yRev ? (Math.min(c0, c1) - f.yMin) / denom : (f.yMax - Math.max(c0, c1)) / denom;
+        applyY(curFrac - 0.2);
+      };
+      vBar.querySelector(".vt-down").onclick = () => {
+        const ya = gd._fullLayout.yaxis, f = gd.__vtFull;
+        const c0 = toNum(ya, ya.range[0]), c1 = toNum(ya, ya.range[1]);
+        const span = Math.abs(c1 - c0), denom = Math.max(1e-9, (f.yMax - f.yMin) - span);
+        const curFrac = f.yRev ? (Math.min(c0, c1) - f.yMin) / denom : (f.yMax - Math.max(c0, c1)) / denom;
+        applyY(curFrac + 0.2);
+      };
+
+      hThumb.onpointerdown = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const startX = e.clientX, startLeft = hThumb.offsetLeft;
+        const maxLeft = Math.max(1, hTrack.clientWidth - hThumb.offsetWidth);
+        const move = (ev) => {
+          const frac = Math.max(0, Math.min(1, (startLeft + ev.clientX - startX) / maxLeft));
+          const f = gd.__vtFull, xa = gd._fullLayout.xaxis;
+          const span = Math.abs(toNum(xa, xa.range[1]) - toNum(xa, xa.range[0]));
+          applyX(f.xMin + frac * Math.max(0, (f.xMax - f.xMin) - span));
+        };
+        const up = () => { doc.removeEventListener("pointermove", move); doc.removeEventListener("pointerup", up); };
+        doc.addEventListener("pointermove", move); doc.addEventListener("pointerup", up);
+      };
+
+      vThumb.onpointerdown = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const startY = e.clientY, startTop = vThumb.offsetTop;
+        const maxTop = Math.max(1, vTrack.clientHeight - vThumb.offsetHeight);
+        const move = (ev) => {
+          const frac = Math.max(0, Math.min(1, (startTop + ev.clientY - startY) / maxTop));
+          applyY(frac);
+        };
+        const up = () => { doc.removeEventListener("pointermove", move); doc.removeEventListener("pointerup", up); };
+        doc.addEventListener("pointermove", move); doc.addEventListener("pointerup", up);
+      };
+    } else {
+      sync();
+    }
+  }
+
+  function scanCharts() {
+    if (!win.Plotly) return;
+    doc.querySelectorAll(".js-plotly-plot").forEach(gd => {
+      styleModebar(gd);
+      attachScrollbars(gd);
+    });
+  }
+
+  win.__vtScanCharts = scanCharts;
+  if (!win.__vtObserverInstalled) {
+    win.__vtObserverInstalled = true;
+    const obs = new MutationObserver(() => {
+      clearTimeout(win.__vtTimer);
+      win.__vtTimer = setTimeout(scanCharts, 80);
+    });
+    obs.observe(doc.body, { childList: true, subtree: true });
+  }
+  setTimeout(scanCharts, 100);
+  setTimeout(scanCharts, 450);
+})();
+</script>
+"""
+
+
 def inject_css():
     st.markdown(CSS, unsafe_allow_html=True)
+    components.html(_ENHANCE_HTML, height=0, width=0)
 
 
 def hero(title: str, text: str, chips: list[str], icon: str = "🏝️"):
@@ -265,8 +709,12 @@ def _stretch() -> dict:
     return {"width": "stretch"} if _ver() >= (1, 50) else {"use_container_width": True}
 
 
-PLOT_CFG = {"displaylogo": False, "displayModeBar": "hover",
-            "modeBarButtonsToRemove": ["lasso2d", "select2d", "autoScale2d"]}
+PLOT_CFG = {
+    "displaylogo": False,
+    "displayModeBar": True,
+    "modeBarButtonsToRemove": ["select2d", "lasso2d", "hoverClosestCartesian", "hoverCompareCartesian", "toggleSpikelines"],
+    "modeBarButtonsToAdd": ["zoomIn2d", "zoomOut2d", "pan2d", "autoScale2d", "resetScale2d"],
+}
 
 
 def show(fig, key=None):
